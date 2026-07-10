@@ -127,8 +127,13 @@ setInterval(async () => {
   }
 }, 5 * 60 * 1000)
 
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+app.get('/api/health', async (_req, res) => {
+  let database = 'disconnected'
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    database = 'connected'
+  } catch {}
+  res.json({ status: 'ok', database, environment: process.env.NODE_ENV || 'development' })
 })
 
 app.use((_req, res) => {
