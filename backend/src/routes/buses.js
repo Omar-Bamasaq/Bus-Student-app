@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { authenticate, authorize } from '../middleware/auth.js'
 import { hashPassword, generateDriverUsername, ensureUniqueUsername, authAudit } from '../services/authService.js'
+import { generateRandomPassword } from '../utils/secrets.js'
 
 const router = Router()
 router.use(authenticate)
@@ -82,7 +83,7 @@ router.post('/', authorize('admin'), async (req, res) => {
         // Create new driver user
         const baseUsername = generateDriverUsername(driverName, busNumber)
         const username = await ensureUniqueUsername(baseUsername)
-        const defaultPassword = primaryPhone || '12345678'
+        const defaultPassword = primaryPhone || generateRandomPassword()
         const hashedPassword = await hashPassword(defaultPassword)
 
         existingDriver = await prisma.user.create({
@@ -146,7 +147,7 @@ router.put('/:id', authorize('admin'), async (req, res) => {
         const currentBus = await prisma.bus.findUnique({ where: { id: req.params.id } })
         const baseUsername = generateDriverUsername(driverName, currentBus?.busNumber || '')
         const username = await ensureUniqueUsername(baseUsername)
-        const defaultPassword = primaryPhone || '12345678'
+        const defaultPassword = primaryPhone || generateRandomPassword()
         const hashedPassword = await hashPassword(defaultPassword)
 
         existingDriver = await prisma.user.create({

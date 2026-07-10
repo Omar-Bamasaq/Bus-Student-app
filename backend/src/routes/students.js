@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { authenticate, authorize } from '../middleware/auth.js'
 import { hashPassword, generateStudentUsername, ensureUniqueUsername } from '../services/authService.js'
+import { generateRandomPassword } from '../utils/secrets.js'
 
 const router = Router()
 router.use(authenticate)
@@ -104,7 +105,7 @@ router.post('/', authorize('admin'), async (req, res) => {
     })
 
     let username = ''
-    let defaultPassword = phone || '12345678'
+    let defaultPassword = phone || generateRandomPassword()
     try {
       const baseUsername = generateStudentUsername(name)
       username = await ensureUniqueUsername(baseUsername)

@@ -1,9 +1,11 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { generateRandomPassword, getAdminInitialPassword, requireDev } from '../src/utils/secrets.js'
 
 const prisma = new PrismaClient()
 
 async function main() {
+  requireDev('Cannot run seed in production')
   await prisma.busLoad.deleteMany()
   await prisma.returnQueue.deleteMany()
   await prisma.activeBus.deleteMany()
@@ -39,9 +41,9 @@ async function main() {
 
   const hash = (p) => bcrypt.hash(p, 10)
 
-  const adminPassword = await hash('123')
-  const driver1Password = await hash('0500000001')
-  const driver2Password = await hash('0500000002')
+  const adminPassword = await hash(getAdminInitialPassword())
+  const driver1Password = await hash(generateRandomPassword())
+  const driver2Password = await hash(generateRandomPassword())
 
   const admin = await prisma.user.create({
     data: { username: 'admin1', password: adminPassword, name: 'مشرف النظام', phone: '0500000000', role: 'admin', mustChangePassword: false },
@@ -89,7 +91,7 @@ async function main() {
     let username = baseUsername
     let counter = 2
     while (await prisma.user.findUnique({ where: { username } })) { username = `${baseUsername}${counter}`; counter++ }
-    const pwd = await hash(s.phone || '12345678')
+    const pwd = await hash(s.phone || generateRandomPassword())
     await prisma.user.create({
       data: { username, password: pwd, name: s.name, phone: s.phone || '', role: 'student', mustChangePassword: true, studentId: s.id },
     })

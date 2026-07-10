@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma.js'
 import { createAuditLog } from '../lib/audit.js'
+import { generateRandomPassword, requireDev } from '../utils/secrets.js'
 
 export async function resetOperations(userId, ip) {
   await prisma.$transaction(async (tx) => {
@@ -106,6 +107,7 @@ export async function resetSystemFull(userId, ip, adminId) {
 }
 
 export async function seedDemoData(userId) {
+  requireDev('Cannot seed demo data in production')
   return await prisma.$transaction(async (tx) => {
     const adminUser = await tx.user.findFirst({ where: { role: 'admin' } })
     if (!adminUser) throw new Error('لا يوجد أدمن')
@@ -146,7 +148,7 @@ export async function seedDemoData(userId) {
     for (let i = 1; i <= 6; i++) {
       driverData.push({
         username: `driver_demo_${i}`,
-        password: bcrypt.hashSync('123456', 10),
+        password: bcrypt.hashSync(generateRandomPassword(), 10),
         name: `سائق تجريبي ${i}`,
         phone: `092${String(100000000 + i).slice(1)}`,
         role: 'driver',

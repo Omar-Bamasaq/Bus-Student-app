@@ -88,3 +88,4 @@ npm run dev
 | `NODE_ENV` | بيئة التشغيل | ❌ (development) |
 | `CORS_ORIGIN` | النطاقات المسموحة (مفصولة بفاصلة) | ❌ |
 | `RATE_LIMIT_MAX` | حد الطلبات لكل 15 دقيقة | ❌ (200) |
+| `ADMIN_INITIAL_PASSWORD` | كلمة مرور المشرف الأولى (للمستخدمين الجدد) | ❌ |

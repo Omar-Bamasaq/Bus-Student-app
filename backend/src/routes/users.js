@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { authenticate, authorize } from '../middleware/auth.js'
 import { hashPassword, generateStudentUsername, generateDriverUsername, ensureUniqueUsername, authAudit } from '../services/authService.js'
+import { generateRandomPassword, getAdminInitialPassword } from '../utils/secrets.js'
 
 const router = Router()
 router.use(authenticate)
@@ -145,13 +146,15 @@ router.post('/:id/reset-password', authorize('admin'), async (req, res) => {
     if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' })
 
     let defaultPassword
-    if (user.role === 'student' && user.studentId) {
+    if (user.role === 'admin') {
+      defaultPassword = getAdminInitialPassword()
+    } else if (user.role === 'student' && user.studentId) {
       const student = await prisma.student.findUnique({ where: { id: user.studentId } })
-      defaultPassword = student?.phone || '12345678'
+      defaultPassword = student?.phone || generateRandomPassword()
     } else if (user.role === 'driver') {
-      defaultPassword = user.phone || '12345678'
+      defaultPassword = user.phone || generateRandomPassword()
     } else {
-      defaultPassword = '123'
+      defaultPassword = generateRandomPassword()
     }
 
     const hashed = await hashPassword(defaultPassword)
