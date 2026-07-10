@@ -1,0 +1,873 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  driver
+  student
+}
+
+enum RecordStatus {
+  active
+  inactive
+  suspended
+}
+
+enum AssignmentStatus {
+  scheduled
+  in_progress
+  completed
+  cancelled
+}
+
+enum BusLine {
+  JEBALI
+  BAHRY
+}
+
+enum TripPeriod {
+  MORNING
+  RETURN
+}
+
+enum SubscriptionType {
+  MONTHLY
+  THREE_WEEKS
+  FOUR_WEEKS
+  DAILY
+}
+
+enum PaymentStatus {
+  paid
+  partial
+  unpaid
+  overdue
+}
+
+enum SubscriptionStatus {
+  pending
+  active
+  expired
+  rejected
+  cancelled
+}
+
+enum CartStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentMethod {
+  cash
+  transfer
+  card
+}
+
+enum BusStatus {
+  active
+  maintenance
+  inactive
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+}
+
+enum TransportMode {
+  LINE
+  HOME
+}
+
+enum OperationStatus {
+  OPEN
+  CLOSED
+}
+
+enum ActiveBusStatus {
+  AVAILABLE
+  LOADING
+  DEPARTED
+  ARRIVED
+  CANCELLED
+  BROKEN_DOWN
+  REPLACED
+}
+
+enum ReturnStatus {
+  WAITING
+  ASSIGNED
+  DEPARTED
+}
+
+enum SaturdayOpStatus {
+  OPEN
+  CLOSED
+}
+
+enum DistanceCategory {
+  NEAR
+  MEDIUM
+  FAR
+}
+
+enum TransferType {
+  PERMANENT
+  TEMPORARY
+}
+
+enum ReceiptStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CampaignStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model User {
+  id                String               @id @default(uuid())
+  username          String               @unique
+  password          String
+  name              String
+  phone             String?
+  role              UserRole             @default(driver)
+  status            RecordStatus         @default(active)
+  mustChangePassword Boolean              @default(false)
+  failedAttempts    Int                  @default(0)
+  lockedUntil       DateTime?
+  lastLogin         DateTime?
+  lastIp            String?
+  studentId         String?              @unique
+  student           Student?             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  buses             Bus[]
+  operations        DailyOperation[]     @relation("OperationCreator")
+  activeBuses       ActiveBus[]          @relation("ActiveBusDriver")
+  busLoads          BusLoad[]            @relation("BusLoadAssigner")
+  approvals         CampaignEnrollment[] @relation("EnrollmentApprover")
+  auditLogs         AuditLog[]
+  weeklySheets      WeeklySheet[]
+  weeklySheetVersions WeeklySheetVersion[]
+  notifications     Notification[]
+  emergencyLogs     EmergencyLog[]
+  emergencyReviews  EmergencyReport[] @relation("ReportReviewer")
+  financialSuspensions StudentFinancial[] @relation("FinancialSuspender")
+  cartsApproved     Cart[]             @relation("CartApprover")
+  saturdayOps       SaturdayOperation[] @relation("SaturdayOpCreator")
+  saturdayBuses     SaturdayActiveBus[] @relation("SaturdayActiveBusDriver")
+
+  @@index([role])
+  @@index([status])
+  @@index([username])
+  @@map("users")
+}
+
+model Destination {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  isActive  Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  students  Student[]
+  prices    Pricing[]
+  cartItems CartItem[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("destinations")
+}
+
+model PricingArea {
+  id                  String   @id @default(uuid())
+  name                String   @unique
+  dailyPrice          Decimal? @db.Decimal(10, 2)
+  threeWeeksPrice     Decimal? @db.Decimal(10, 2)
+  fourWeeksPrice      Decimal? @db.Decimal(10, 2)
+  homeNearSurcharge   Decimal? @db.Decimal(10, 2)
+  homeMediumSurcharge Decimal? @db.Decimal(10, 2)
+  homeFarSurcharge    Decimal? @db.Decimal(10, 2)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  enrollments         CampaignEnrollment[]
+  prices              Pricing[]
+  cartItems           CartItem[]
+
+  @@index([isActive])
+  @@map("pricing_areas")
+}
+
+model Pricing {
+  id            String           @id @default(uuid())
+  zoneId        String
+  zone          PricingArea      @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  destinationId String?
+  destination   Destination?     @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  plan          SubscriptionType
+  price         Decimal          @db.Decimal(10, 2)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([zoneId, destinationId, plan], name: "zone_dest_plan_unique")
+  @@index([zoneId])
+  @@index([destinationId])
+  @@index([plan])
+  @@map("pricing")
+}
+
+model Student {
+  id                String             @id @default(uuid())
+  name              String
+  phone             String?
+  whatsapp          String?
+  parentName        String?
+  parentPhone       String?
+  parentRelation    String?
+  address           String?
+  zone              String?
+  destinationId     String?
+  destination       Destination?       @relation(fields: [destinationId], references: [id], onDelete: SetNull)
+  major             String?
+  level             String?
+  institutionName   String?
+  offDays           Json?              @default("[]")
+  pickupLocation    String?
+  status            RecordStatus       @default(active)
+  transportMode     TransportMode      @default(LINE)
+  homeAddress       String?
+  homeDeliveryFee   Decimal            @default(0) @db.Decimal(10, 2)
+  homeDeliveryFeeDaily Decimal?        @default(0) @db.Decimal(10, 2)
+  homeDeliveryFeeThreeWeeks Decimal?   @default(0) @db.Decimal(10, 2)
+  homeDeliveryFeeFourWeeks Decimal?    @default(0) @db.Decimal(10, 2)
+  homeNotes         String?
+  homeDeliveryActive Boolean           @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User?
+  assignments       Assignment[]
+  subscriptions     Subscription[]
+  attendances       Attendance[]
+  returnQueue       ReturnQueue[]
+  busLoads          BusLoad[]
+  busStudents       BusStudent[]
+  enrollments       CampaignEnrollment[]
+  transfers         StudentTransfer[] @relation("TransferringStudent")
+  busStudentOrders  BusStudentOrder[]
+  financial         StudentFinancial?
+  carts             Cart[]
+  saturdayLoads     SaturdayBusLoad[] @relation("SaturdayLoadStudent")
+
+  @@index([status])
+  @@index([zone])
+  @@index([name])
+  @@index([transportMode])
+  @@map("students")
+}
+
+model Bus {
+  id               String           @id @default(uuid())
+  busNumber        String?          @unique
+  plateNumber      String?          @unique
+  capacity         Int
+  vehicleType      String?
+  driverName       String?
+  model            String?
+  color            String?
+  status           BusStatus        @default(active)
+  driverId         String?
+  driver           User?            @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  primaryPhone     String?
+  secondaryPhone   String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  assignments      Assignment[]
+  attendances      Attendance[]
+  activeBuses      ActiveBus[]
+  templateStudents BusStudent[]
+  outgoingTransfers StudentTransfer[] @relation("TransferSourceBus")
+  incomingTransfers StudentTransfer[] @relation("TransferDestinationBus")
+  weeklySheets     WeeklySheet[]
+  busStudentOrders BusStudentOrder[]
+  saturdayBuses    SaturdayActiveBus[]
+
+  @@index([status])
+  @@index([driverId])
+  @@map("buses")
+}
+
+model BusStudent {
+  id                String             @id @default(uuid())
+  busId             String
+  bus               Bus                @relation(fields: [busId], references: [id], onDelete: Cascade)
+  studentId         String
+  student           Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  isActive          Boolean            @default(true)
+  pickupTime        String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@unique([studentId])
+  @@index([busId])
+  @@index([studentId])
+  @@map("bus_students")
+}
+
+model StudentTransfer {
+  id        String       @id @default(uuid())
+  studentId String
+  student   Student      @relation("TransferringStudent", fields: [studentId], references: [id])
+  fromBusId String
+  fromBus   Bus          @relation("TransferSourceBus", fields: [fromBusId], references: [id])
+  toBusId   String
+  toBus     Bus          @relation("TransferDestinationBus", fields: [toBusId], references: [id])
+  startDate DateTime     @db.Date
+  endDate   DateTime     @db.Date
+  type      TransferType @default(PERMANENT)
+  reason    String?
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([studentId])
+  @@index([fromBusId])
+  @@index([toBusId])
+  @@index([isActive])
+  @@index([endDate])
+  @@map("student_transfers")
+}
+
+model Assignment {
+  id          String           @id @default(uuid())
+  studentId   String
+  student     Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  busId       String
+  bus         Bus              @relation(fields: [busId], references: [id], onDelete: Cascade)
+  date        DateTime         @db.Date
+  period      TripPeriod       @default(MORNING)
+  line        BusLine          @default(JEBALI)
+  pickupTime  String?
+  dropoffTime String?
+  status      AssignmentStatus @default(scheduled)
+  isGenerated Boolean          @default(false)
+  sortOrder   Int              @default(0)
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([studentId, date, period])
+  @@index([busId])
+  @@index([date])
+  @@index([line])
+  @@index([period])
+  @@index([status])
+  @@map("assignments")
+}
+
+model DailyOperation {
+  id            String       @id @default(uuid())
+  operationDate DateTime     @unique @db.Date
+  createdById   String
+  createdBy     User         @relation("OperationCreator", fields: [createdById], references: [id])
+  status        OperationStatus @default(OPEN)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  activeBuses   ActiveBus[]
+  returnQueue   ReturnQueue[]
+
+  @@index([operationDate])
+  @@index([status])
+  @@map("daily_operations")
+}
+
+model ActiveBus {
+  id               String         @id @default(uuid())
+  operationId      String
+  operation        DailyOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  busId            String
+  bus              Bus            @relation(fields: [busId], references: [id])
+  driverId         String
+  driver           User           @relation("ActiveBusDriver", fields: [driverId], references: [id])
+  line             BusLine?
+  capacitySnapshot Int
+  status           ActiveBusStatus @default(AVAILABLE)
+  returnCompletedAt DateTime?
+  currentStudentIdx Int           @default(0)
+  skippedStudentIds String?       @default("[]")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  loads            BusLoad[]
+
+  @@index([operationId])
+  @@index([busId])
+  @@index([status])
+  @@map("active_buses")
+}
+
+model ReturnQueue {
+  id              String       @id @default(uuid())
+  operationId     String
+  operation       DailyOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         Student      @relation(fields: [studentId], references: [id])
+  enteredAt       DateTime     @default(now())
+  preferredLine   BusLine?
+  transportMode   TransportMode @default(LINE)
+  notes           String?
+  status          ReturnStatus @default(WAITING)
+
+  @@index([operationId])
+  @@index([studentId])
+  @@index([status])
+  @@map("return_queue")
+}
+
+model BusLoad {
+  id              String     @id @default(uuid())
+  activeBusId     String
+  activeBus       ActiveBus  @relation(fields: [activeBusId], references: [id], onDelete: Cascade)
+  studentId       String
+  student         Student    @relation(fields: [studentId], references: [id])
+  assignedAt      DateTime   @default(now())
+  assignedById    String
+  assignedBy      User       @relation("BusLoadAssigner", fields: [assignedById], references: [id])
+  exceptionReason String?
+  departedAt      DateTime?
+  droppedOffAt    DateTime?
+  sortOrder       Int          @default(0)
+
+  @@unique([activeBusId, studentId])
+  @@index([activeBusId])
+  @@index([studentId])
+  @@map("bus_loads")
+}
+
+model Campaign {
+  id              String           @id @default(uuid())
+  name            String?
+  title           String
+  description     String?
+  type            String           @default("discount")
+  startDate       DateTime         @db.Date
+  endDate         DateTime         @db.Date
+  discountAmount      Decimal          @default(0) @db.Decimal(10, 2)
+  discountPercent     Decimal?         @db.Decimal(5, 2)
+  hasEarlyDiscount    Boolean          @default(false)
+  discountStart       DateTime?
+  discountExpiry      DateTime?
+  maxStudents     Int?
+  isActive        Boolean          @default(true)
+  status          CampaignStatus   @default(ACTIVE)
+  enableExtraRegistrationFee Boolean @default(false)
+  extraRegistrationFee   Decimal        @default(2000) @db.Decimal(10, 2)
+  extraFeeStart          DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  enrollments     CampaignEnrollment[]
+
+  @@index([status])
+  @@index([isActive])
+  @@map("campaigns")
+}
+
+model CampaignEnrollment {
+  id              String         @id @default(uuid())
+  campaignId      String
+  campaign        Campaign       @relation(fields: [campaignId], references: [id])
+  studentId       String
+  student         Student        @relation(fields: [studentId], references: [id])
+  areaId          String?
+  area            PricingArea?   @relation(fields: [areaId], references: [id])
+  baseAmount      Decimal        @db.Decimal(10, 2)
+  surcharge       Decimal        @default(0) @db.Decimal(10, 2)
+  discount        Decimal        @default(0) @db.Decimal(10, 2)
+  extraFeeType    String?
+  extraFeeAmount  Decimal?       @db.Decimal(10, 2)
+  finalAmount     Decimal        @db.Decimal(10, 2)
+  receiptImage    String?
+  receiptStatus   ReceiptStatus  @default(PENDING)
+  rejectionReason String?
+  approvedById    String?
+  approvedBy      User?          @relation("EnrollmentApprover", fields: [approvedById], references: [id])
+  approvedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([studentId])
+  @@index([receiptStatus])
+  @@map("campaign_enrollments")
+}
+
+model Subscription {
+  id              String             @id @default(uuid())
+  studentId       String
+  student         Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type            SubscriptionType
+  startDate       DateTime           @db.Date
+  endDate         DateTime           @db.Date
+  executionDate   DateTime?          @db.Date
+  amount          Decimal            @db.Decimal(10, 2)
+  paidAmount      Decimal            @default(0) @db.Decimal(10, 2)
+  paymentStatus   PaymentStatus      @default(unpaid)
+  status          SubscriptionStatus @default(active)
+  homeDeliveryFee Decimal?           @db.Decimal(10, 2)
+  notes           String?
+  durationWeeks   Int?
+  selectedDays    String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  payments        Payment[]
+  executionDates  DailyExecutionDate[]
+
+  @@index([studentId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([endDate])
+  @@index([executionDate])
+  @@map("subscriptions")
+}
+
+model DailyExecutionDate {
+  id             String       @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  executionDate  DateTime     @db.Date
+  status         String       @default("pending")
+
+  @@unique([subscriptionId, executionDate])
+  @@index([executionDate])
+  @@index([subscriptionId])
+  @@map("daily_execution_dates")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  amount         Decimal       @db.Decimal(10, 2)
+  date           DateTime      @default(now()) @db.Date
+  method         PaymentMethod
+  reference      String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+
+  @@index([subscriptionId])
+  @@index([date])
+  @@index([method])
+  @@map("payments")
+}
+
+model Attendance {
+  id          String           @id @default(uuid())
+  studentId   String
+  student     Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  busId       String
+  bus         Bus              @relation(fields: [busId], references: [id], onDelete: Cascade)
+  date        DateTime         @db.Date
+  status      AttendanceStatus @default(present)
+  contacted   Boolean          @default(false)
+  contactTime String?
+  notes       String?
+  createdAt   DateTime         @default(now())
+
+  @@unique([studentId, date])
+  @@index([busId])
+  @@index([date])
+  @@index([status])
+  @@map("attendances")
+}
+
+model AuditLog {
+  id         String    @id @default(uuid())
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  oldValue   Json?
+  newValue   Json?
+  reason     String?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model WeeklySheet {
+  id            String               @id @default(uuid())
+  busId         String
+  bus           Bus                  @relation(fields: [busId], references: [id], onDelete: Cascade)
+  weekStart     DateTime             @db.Date
+  weekEnd       DateTime             @db.Date
+  version       Int                  @default(1)
+  generatedById String
+  generatedBy   User                 @relation(fields: [generatedById], references: [id])
+  studentCount  Int                  @default(0)
+  notes         String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  students      WeeklySheetStudent[]
+  versions      WeeklySheetVersion[]
+
+  @@unique([busId, weekStart])
+  @@index([busId])
+  @@index([weekStart])
+  @@map("weekly_sheets")
+}
+
+model WeeklySheetStudent {
+  id             String        @id @default(uuid())
+  sheetId        String
+  sheet          WeeklySheet   @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  studentId      String
+  studentName    String
+  major            String?
+  level            String?
+  institutionName  String?
+  pickupLocation   String?
+  pickupTime     String?
+  transportMode  TransportMode @default(LINE)
+  sortOrder      Int           @default(0)
+  isTransfer     Boolean       @default(false)
+  transferFrom   String?
+  offDays        Json?         @default("[]")
+  homeNotes      String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+
+  @@index([sheetId])
+  @@index([studentId])
+  @@map("weekly_sheet_students")
+}
+
+model BusStudentOrder {
+  id          String   @id @default(uuid())
+  busId       String
+  bus         Bus      @relation(fields: [busId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  sortOrder   Int      @default(0)
+  isTemporary Boolean  @default(false)
+  date        DateTime @db.Date
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([busId])
+  @@index([busId, date])
+  @@map("bus_student_orders")
+}
+
+model Notification {
+  id          String               @id @default(uuid())
+  userId      String
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String
+  title       String
+  message     String
+  priority    String               @default("INFO")
+  targetRoute String?
+  dedupKey    String?
+  data        Json?
+  isRead      Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([dedupKey])
+  @@map("notifications")
+}
+
+model Cart {
+  id              String        @id @default(uuid())
+  studentId       String
+  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status          CartStatus    @default(DRAFT)
+  receiptImage    String?
+  totalAmount     Decimal       @default(0) @db.Decimal(10, 2)
+  rejectionReason String?
+  submittedAt     DateTime?
+  approvedById    String?
+  approvedBy      User?         @relation("CartApprover", fields: [approvedById], references: [id])
+  approvedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  items           CartItem[]
+
+  @@index([studentId])
+  @@index([status])
+  @@map("carts")
+}
+
+model CartItem {
+  id              String           @id @default(uuid())
+  cartId          String
+  cart            Cart             @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  type            SubscriptionType
+  zoneId          String?
+  zone            PricingArea?     @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  destinationId   String?
+  destination     Destination?     @relation(fields: [destinationId], references: [id], onDelete: SetNull)
+  amount          Decimal          @db.Decimal(10, 2)
+  homeDeliveryFee Decimal?         @db.Decimal(10, 2)
+  data            Json?
+  createdAt       DateTime         @default(now())
+
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+model SaturdayOperation {
+  id            String             @id @default(uuid())
+  operationDate DateTime           @unique @db.Date
+  status        SaturdayOpStatus   @default(OPEN)
+  createdById   String
+  createdBy     User               @relation("SaturdayOpCreator", fields: [createdById], references: [id])
+  buses         SaturdayActiveBus[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([operationDate])
+  @@map("saturday_operations")
+}
+
+model SaturdayActiveBus {
+  id               String            @id @default(uuid())
+  operationId      String
+  operation        SaturdayOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  busId            String
+  bus              Bus               @relation(fields: [busId], references: [id])
+  driverId         String
+  driver           User              @relation("SaturdayActiveBusDriver", fields: [driverId], references: [id])
+  capacitySnapshot Int
+  status           String            @default("ACTIVE")
+  loads            SaturdayBusLoad[]
+  createdAt        DateTime          @default(now())
+
+  @@unique([operationId, busId])
+  @@map("saturday_active_buses")
+}
+
+model SaturdayBusLoad {
+  id            String            @id @default(uuid())
+  activeBusId   String
+  activeBus     SaturdayActiveBus @relation(fields: [activeBusId], references: [id], onDelete: Cascade)
+  studentId     String
+  student       Student           @relation("SaturdayLoadStudent", fields: [studentId], references: [id])
+  pickupTime    String?
+  assignedAt    DateTime          @default(now())
+  departedAt    DateTime?
+
+  @@unique([activeBusId, studentId])
+  @@map("saturday_bus_loads")
+}
+
+model MessageTemplate {
+  id        String               @id @default(uuid())
+  key       String               @unique
+  name      String
+  message   String
+  isActive  Boolean              @default(true)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([key])
+  @@map("message_templates")
+}
+
+model WeeklySheetVersion {
+  id            String         @id @default(uuid())
+  sheetId       String
+  sheet         WeeklySheet    @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  version       Int
+  generatedById String
+  generatedBy   User           @relation(fields: [generatedById], references: [id])
+  studentCount  Int            @default(0)
+  snapshot      Json?
+  createdAt     DateTime       @default(now())
+
+  @@unique([sheetId, version])
+  @@index([sheetId])
+  @@map("weekly_sheet_versions")
+}
+
+enum EmergencyReportStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
+model EmergencyReport {
+  id              String                 @id @default(uuid())
+  busId           String
+  driverId        String
+  reason          String                 // MECHANICAL, ACCIDENT, TRAFFIC, ROAD_CLOSED, OTHER
+  notes           String?
+  status          EmergencyReportStatus  @default(PENDING_REVIEW)
+  rejectionReason String?
+  reviewedById    String?
+  reviewedBy      User?                  @relation("ReportReviewer", fields: [reviewedById], references: [id])
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@index([busId])
+  @@index([status])
+  @@map("emergency_reports")
+}
+
+model EmergencyLog {
+  id            String   @id @default(uuid())
+  busId         String
+  busNumber     String?
+  action        String   // DECLARE_BREAKDOWN, AUTO_TRANSFER, MANUAL_TRANSFER, REPLACEMENT, CANCEL_EMERGENCY
+  reason        String?  // MECHANICAL, ACCIDENT, DRIVER_ABSENT, OTHER
+  details       Json?
+  performedById String
+  performedBy   User     @relation(fields: [performedById], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@index([busId])
+  @@index([createdAt])
+  @@map("emergency_logs")
+}
+
+model StudentFinancial {
+  id                String    @id @default(uuid())
+  studentId         String    @unique
+  student           Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  isSuspended       Boolean   @default(false)
+  suspendedAt       DateTime?
+  suspendedById     String?
+  suspendedBy       User?     @relation("FinancialSuspender", fields: [suspendedById], references: [id])
+  suspensionReason  String?
+  reactivatedAt     DateTime?
+  gracePeriodEnd    DateTime? @db.Date
+  graceReason       String?
+  lastReminderSentAt DateTime?
+  reminderCount     Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([studentId])
+  @@index([isSuspended])
+  @@index([gracePeriodEnd])
+  @@map("student_financial")
+}

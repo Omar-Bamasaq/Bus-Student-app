@@ -1,0 +1,127 @@
+import { Router } from 'express'
+import { prisma } from '../lib/prisma.js'
+import { authenticate } from '../middleware/auth.js'
+import {
+  hashPassword, comparePassword, signToken,
+  handleLoginAttempt, isAccountLocked, authAudit,
+} from '../services/authService.js'
+import { expireSubscriptions } from '../services/subscriptionService.js'
+
+const router = Router()
+
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body
+    if (!username || !password) {
+      return res.status(400).json({ error: 'اسم المستخدم وكلمة المرور مطلوبان' })
+    }
+
+    const user = await prisma.user.findUnique({ where: { username } })
+    if (!user) {
+      return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' })
+    }
+
+    if (isAccountLocked(user)) {
+      const remaining = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000)
+      return res.status(429).json({ error: `الحساب مقفل. حاول بعد ${remaining} دقيقة` })
+    }
+
+    const valid = await comparePassword(password, user.password)
+    const ip = req.ip || req.connection?.remoteAddress || ''
+
+    if (!valid) {
+      await handleLoginAttempt(user.id, false, ip)
+      await authAudit('LOGIN_FAILED', user.id, { ip })
+      return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' })
+    }
+
+    if (user.status !== 'active') {
+      return res.status(401).json({ error: 'الحساب غير نشط' })
+    }
+
+    await handleLoginAttempt(user.id, true, ip)
+    await authAudit('LOGIN_SUCCESS', user.id, { ip })
+    await expireSubscriptions()
+
+    const token = signToken(user)
+
+    let profile = null
+    if (user.role === 'student' && user.studentId) {
+      const student = await prisma.student.findUnique({
+        where: { id: user.studentId },
+        select: { id: true, name: true, zone: true, transportMode: true },
+      })
+      if (student) profile = student
+    }
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        mustChangePassword: user.mustChangePassword,
+      },
+      profile,
+    })
+  } catch (error) {
+    console.error('LOGIN ERROR:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.post('/change-password', authenticate, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'كلمة المرور الحالية والجديدة مطلوبتان' })
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل' })
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } })
+    if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' })
+
+    const valid = await comparePassword(currentPassword, user.password)
+    if (!valid) {
+      return res.status(400).json({ error: 'كلمة المرور الحالية غير صحيحة' })
+    }
+
+    const hashed = await hashPassword(newPassword)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashed, mustChangePassword: false },
+    })
+
+    await authAudit('PASSWORD_CHANGED', user.id)
+
+    const token = signToken({ ...user, mustChangePassword: false })
+
+    res.json({ message: 'تم تغيير كلمة المرور بنجاح', token })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: {
+        id: true, username: true, name: true, phone: true,
+        role: true, status: true, mustChangePassword: true,
+        lastLogin: true, studentId: true,
+      },
+    })
+    if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' })
+    res.json(user)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+export default router

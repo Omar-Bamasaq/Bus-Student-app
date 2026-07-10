@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F97316" />
+    <meta name="description" content="نظام إدارة نقل الطلاب" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>نظام إدارة النقل المدرسي</title>
+  </head>
+  <body>
+    <!-- Splash Screen -->
+    <div id="splash" style="position: fixed; inset: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 9999;">
+      <img src="/logo.svg" alt="شعار الشركة" style="width: 180px; height: 180px; object-fit: contain;" />
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Hide splash screen once app is loaded
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const splash = document.getElementById('splash');
+          if (splash) splash.style.display = 'none';
+        }, 500);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,140 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { User, LogOut, Save, Eye, EyeOff, KeyRound, Shield } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
+import { api } from '../../lib/api'
+
+export default function Settings() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showCurrent, setShowCurrent] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError('جميع الحقول مطلوبة')
+      return
+    }
+    if (newPassword.length < 8) {
+      setError('كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setError('كلمة المرور الجديدة غير مطابقة')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      await api.auth.changePassword(currentPassword, newPassword)
+      setSuccess('تم تغيير كلمة المرور بنجاح')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Profile info */}
+      <div className="bg-white rounded-xl p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-8 bg-[var(--color-primary)]/10 rounded-full flex items-center justify-center">
+            <User size={16} className="text-[var(--color-primary)]" />
+          </div>
+          <h3 className="text-sm font-bold text-slate-800">المعلومات الشخصية</h3>
+        </div>
+        <div className="space-y-1 text-xs">
+          <div className="flex justify-between py-1">
+            <span className="text-slate-500">الاسم:</span>
+            <span className="text-slate-700 font-medium">{user?.name}</span>
+          </div>
+          <div className="flex justify-between py-1 border-t border-slate-50">
+            <span className="text-slate-500">اسم المستخدم:</span>
+            <span className="text-slate-700">{user?.username}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Change password */}
+      <div className="bg-white rounded-xl p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-8 bg-amber-50 rounded-full flex items-center justify-center">
+            <KeyRound size={16} className="text-amber-600" />
+          </div>
+          <h3 className="text-sm font-bold text-slate-800">تغيير كلمة المرور</h3>
+        </div>
+        <form onSubmit={handleChangePassword} className="space-y-2">
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">كلمة المرور الحالية</label>
+            <div className="relative">
+              <input type={showCurrent ? 'text' : 'password'} value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-primary)]"
+                dir="ltr" />
+              <button type="button" onClick={() => setShowCurrent(!showCurrent)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400">
+                {showCurrent ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">كلمة المرور الجديدة</label>
+            <div className="relative">
+              <input type={showNew ? 'text' : 'password'} value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-primary)]"
+                dir="ltr" />
+              <button type="button" onClick={() => setShowNew(!showNew)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400">
+                {showNew ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-1">تأكيد كلمة المرور الجديدة</label>
+            <input type="password" value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-primary)]"
+              dir="ltr" />
+          </div>
+
+          {error && <p className="text-red-500 text-xs">{error}</p>}
+          {success && <p className="text-green-600 text-xs bg-green-50 p-2 rounded-lg">{success}</p>}
+
+          <button type="submit" disabled={submitting}
+            className="w-full bg-[var(--color-primary)] text-white py-2.5 rounded-lg text-xs font-medium disabled:opacity-50 min-h-[44px] flex items-center justify-center gap-1">
+            <Save size={14} />
+            {submitting ? 'جاري...' : 'حفظ التغييرات'}
+          </button>
+        </form>
+      </div>
+
+      {/* Logout */}
+      <button onClick={handleLogout}
+        className="w-full bg-red-50 text-red-600 py-2.5 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 min-h-[44px]">
+        <LogOut size={14} />
+        تسجيل الخروج
+      </button>
+    </div>
+  )
+}

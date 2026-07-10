@@ -1,0 +1,108 @@
+import { AnimatePresence, motion } from 'framer-motion'
+import { NavLink, useNavigate } from 'react-router-dom'
+import {
+  LayoutDashboard, Users, Bus, CalendarCheck, ClipboardList,
+  FileText, DollarSign, Settings, LogOut, X, AlertTriangle,
+  CreditCard, Smartphone, Sun,
+} from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
+
+const navItems = [
+  { to: '/admin', label: 'لوحة التحكم', icon: LayoutDashboard, end: true },
+  { to: '/admin/buses', label: 'الباصات', icon: Bus },
+  { to: '/admin/students', label: 'الطلاب', icon: Users },
+  { to: '/admin/operations/today', label: 'تشغيل اليوم', icon: CalendarCheck },
+  { to: '/admin/emergency', label: 'مركز الطوارئ', icon: AlertTriangle },
+  { to: '/admin/operations/return', label: 'رحلات العودة', icon: ClipboardList },
+  { to: '/admin/reports/weekly-sheets', label: 'الكشوف الأسبوعية', icon: FileText },
+  { to: '/admin/subscriptions', label: 'الاشتراكات', icon: DollarSign },
+  { to: '/admin/financial-control', label: 'الإدارة المالية', icon: CreditCard },
+  { to: '/admin/manage/users', label: 'المستخدمون', icon: Users },
+  { to: '/admin/manage/settings', label: 'الإعدادات', icon: Settings },
+  { to: '/admin/saturday/operation', label: 'تشغيل السبت', icon: Sun },
+  { to: '/admin/download-app', label: 'تنزيل التطبيق', icon: Smartphone },
+]
+
+export default function MobileDrawer({ open, onClose }) {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    logout()
+    navigate('/login')
+  }
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 z-50 lg:hidden"
+            onClick={onClose}
+          />
+          <motion.aside
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed top-0 left-0 h-full w-[85vw] max-w-sm bg-white z-50 shadow-2xl overflow-y-auto lg:hidden"
+            style={{ direction: 'rtl' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--color-border)]">
+              <div className="flex items-center gap-3">
+                <img src="/logo.svg" alt="شعار" className="w-9 h-9 sm:w-11 sm:h-11 object-contain" />
+                <div>
+                  <p className="text-sm font-bold">{user?.name || 'المشرف'}</p>
+                  <p className="text-[10px] text-[var(--color-text-muted)]">{user?.role === 'admin' ? 'مدير النظام' : 'مشرف'}</p>
+                </div>
+              </div>
+              <button onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--color-border-light)]">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Nav items */}
+            <nav className="p-3 sm:p-4 space-y-0.5">
+              {navItems.map((item) => {
+                const Icon = item.icon
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 sm:px-4 py-3 rounded-xl text-sm sm:text-base transition-all duration-150 ${
+                        isActive
+                          ? 'bg-[var(--color-primary-lighter)] text-[var(--color-primary-dark)] font-semibold'
+                          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-border-light)]'
+                      }`
+                    }
+                  >
+                    <Icon size={20} strokeWidth={1.5} className="shrink-0" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                )
+              })}
+            </nav>
+
+            {/* Logout */}
+            <div className="p-3 sm:p-4 border-t border-[var(--color-border)]">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 w-full px-3 sm:px-4 py-3 rounded-xl text-sm sm:text-base text-[var(--color-text-secondary)] hover:bg-[var(--color-danger-light)] hover:text-[var(--color-danger)] transition-all duration-150"
+              >
+                <LogOut size={20} strokeWidth={1.5} className="shrink-0" />
+                <span>تسجيل الخروج</span>
+              </button>
+            </div>
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}

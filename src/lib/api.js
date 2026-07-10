@@ -1,0 +1,372 @@
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
+function getToken() {
+  return localStorage.getItem("token");
+}
+
+async function request(endpoint, options = {}) {
+  const token = getToken();
+  const headers = { "Content-Type": "application/json", ...options.headers };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+
+  if (res.status === 401) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
+    throw new Error("غير مصرح به");
+  }
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "حدث خطأ");
+  return data;
+}
+
+export const api = {
+  get: (endpoint) => request(endpoint),
+  post: (endpoint, body) =>
+    request(endpoint, { method: "POST", body: JSON.stringify(body) }),
+  put: (endpoint, body) =>
+    request(endpoint, { method: "PUT", body: JSON.stringify(body) }),
+  patch: (endpoint, body) =>
+    request(endpoint, { method: "PATCH", body: JSON.stringify(body) }),
+  delete: (endpoint) => request(endpoint, { method: "DELETE" }),
+
+  auth: {
+    login: (username, password) =>
+      api.post("/auth/login", { username, password }),
+    me: () => api.get("/auth/me"),
+    changePassword: (currentPassword, newPassword) =>
+      api.post("/auth/change-password", { currentPassword, newPassword }),
+  },
+
+  users: {
+    list: (params) => api.get(`/users?${new URLSearchParams(params)}`),
+    get: (id) => api.get(`/users/${id}`),
+    create: (data) => api.post("/users", data),
+    update: (id, data) => api.put(`/users/${id}`, data),
+    resetPassword: (id) => api.post(`/users/${id}/reset-password`),
+    forceChangePassword: (id) => api.post(`/users/${id}/force-change-password`),
+    generateUsername: (id) => api.post(`/users/${id}/generate-username`),
+    updateStatus: (id, status) => api.patch(`/users/${id}/status`, { status }),
+  },
+
+  students: {
+    list: (params) => api.get(`/students?${new URLSearchParams(params)}`),
+    get: (id) => api.get(`/students/${id}`),
+    create: (data) => api.post("/students", data),
+    update: (id, data) => api.put(`/students/${id}`, data),
+    delete: (id) => api.delete(`/students/${id}`),
+  },
+
+  buses: {
+    list: (params) => api.get(`/buses?${new URLSearchParams(params)}`),
+    get: (id) => api.get(`/buses/${id}`),
+    create: (data) => api.post("/buses", data),
+    update: (id, data) => api.put(`/buses/${id}`, data),
+    delete: (id) => api.delete(`/buses/${id}`),
+  },
+
+  assignments: {
+    list: (params) => api.get(`/assignments?${new URLSearchParams(params)}`),
+    get: (id) => api.get(`/assignments/${id}`),
+    create: (data) => api.post("/assignments", data),
+    createBatch: (data) => api.post("/assignments/batch", data),
+    update: (id, data) => api.put(`/assignments/${id}`, data),
+    templateStudents: (busId, date) =>
+      api.get(
+        `/assignments/bus/${busId}/template-students?${new URLSearchParams({ date })}`,
+      ),
+    delete: (id) => api.delete(`/assignments/${id}`),
+  },
+
+  subscriptions: {
+    list: (params) => api.get(`/subscriptions?${new URLSearchParams(params)}`),
+    get: (id) => api.get(`/subscriptions/${id}`),
+  },
+
+  attendance: {
+    list: (params) => api.get(`/attendance?${new URLSearchParams(params)}`),
+    today: (busId) => api.get(`/attendance/today/${busId}`),
+    student: (studentId) => api.get(`/attendance/student/${studentId}`),
+    mark: (data) => api.post("/attendance", data),
+    batch: (records) => api.post("/attendance/batch", { records }),
+    startMorning: (busId) => api.post(`/attendance/start-morning/${busId}`),
+    completeMorning: (busId) => api.post(`/attendance/complete-morning/${busId}`),
+  },
+
+  dashboard: {
+    stats: () => api.get("/dashboard/stats"),
+    recentPayments: () => api.get("/dashboard/recent-payments"),
+  },
+
+  return: {
+    operation: {
+      get: () => api.get("/return/operation"),
+      create: (data) => api.post("/return/operation", data),
+      close: (id) => api.patch(`/return/operation/${id}/close`, {}),
+    },
+    queue: {
+      list: () => api.get("/return/queue"),
+      add: (studentId, notes) =>
+        api.post("/return/queue", { studentId, notes }),
+      remove: (id) => api.delete(`/return/queue/${id}`),
+    },
+    activeBuses: {
+      list: () => api.get("/return/active-buses"),
+      add: (busId) => api.post("/return/active-buses", { busId }),
+      updateStatus: (id, status) =>
+        api.patch(`/return/active-buses/${id}/status`, { status }),
+      remove: (id) => api.delete(`/return/active-buses/${id}`),
+    },
+    loads: {
+      add: (activeBusId, studentId, exceptionReason) =>
+        api.post("/return/load", { activeBusId, studentId, exceptionReason }),
+      remove: (activeBusId, studentId) =>
+        api.delete(`/return/load/${activeBusId}/${studentId}`),
+      dropoff: (activeBusId, studentId) =>
+        api.patch(`/return/load/${activeBusId}/${studentId}/dropoff`, {}),
+    },
+    reorder: (activeBusId, studentIds) =>
+      api.post(`/return/active-buses/${activeBusId}/reorder`, { studentIds }),
+    dispatch: (activeBusId, line, studentIds) =>
+      api.post(`/return/active-buses/${activeBusId}/dispatch`, { line, studentIds }),
+    complete: (activeBusId) =>
+      api.patch(`/return/active-buses/${activeBusId}/complete`, {}),
+    departed: () => api.get("/return/departed"),
+  },
+
+  busStudents: {
+    list: (busId) => api.get(`/bus-students/bus/${busId}`),
+    listAll: () => api.get('/bus-students/all'),
+    add: (busId, studentId, pickupTime) => api.post('/bus-students', { busId, studentId, pickupTime }),
+    remove: (busId, studentId) =>
+      api.delete(`/bus-students/${busId}/${studentId}`),
+    update: (busId, studentId, data) =>
+      api.put(`/bus-students/${busId}/${studentId}`, data),
+    transfer: (studentId, fromBusId, toBusId, pickupTime) =>
+      api.post('/bus-students/transfer', { studentId, fromBusId, toBusId, pickupTime }),
+    bulkPickupTime: (busId, adjustment, minutes) =>
+      api.patch(`/bus-students/bulk-pickup-time/${busId}`, { adjustment, minutes }),
+  },
+
+  tempTransfers: {
+    active: () => api.get('/temp-transfers/active'),
+    forBus: (busId) => api.get(`/temp-transfers/bus/${busId}`),
+    create: (studentId, fromBusId, toBusId, durationDays) =>
+      api.post('/temp-transfers', { studentId, fromBusId, toBusId, durationDays }),
+    cancel: (id) => api.delete(`/temp-transfers/${id}`),
+    expire: () => api.post('/temp-transfers/expire'),
+  },
+
+  destinations: {
+    list: () => api.get("/destinations"),
+    active: () => api.get("/destinations/active"),
+    get: (id) => api.get(`/destinations/${id}`),
+    create: (data) => api.post("/destinations", data),
+    update: (id, data) => api.put(`/destinations/${id}`, data),
+    delete: (id) => api.delete(`/destinations/${id}`),
+  },
+
+  pricing: {
+    list: () => api.get("/pricing"),
+    all: () => api.get("/pricing/all"),
+    zones: () => api.get("/pricing/zones"),
+    zone: (id) => api.get(`/pricing/zones/${id}`),
+    create: (data) => api.post("/pricing", data),
+    update: (id, data) => api.put(`/pricing/${id}`, data),
+    updateZone: (id, data) => api.put(`/pricing/zones/${id}`, data),
+    delete: (id) => api.delete(`/pricing/${id}`),
+    copy: (sourceZoneId, targetZoneId) =>
+      api.post("/pricing/copy", { sourceZoneId, targetZoneId }),
+    getPrice: (zoneId, destinationId, plan) =>
+      api.get(`/pricing/price?${new URLSearchParams({ zoneId, destinationId: destinationId || '', plan })}`),
+  },
+
+  campaigns: {
+    list: () => api.get("/campaigns"),
+    active: () => api.get("/campaigns/active"),
+    create: (data) => api.post("/campaigns", data),
+    update: (id, data) => api.put(`/campaigns/${id}`, data),
+    delete: (id) => api.delete(`/campaigns/${id}`),
+  },
+
+  enrollments: {
+    list: (params) => api.get(`/enrollments?${new URLSearchParams(params)}`),
+    create: (data) => api.post("/enrollments", data),
+    approve: (id) => api.patch(`/enrollments/${id}/approve`, {}),
+    reject: (id, reason) => api.patch(`/enrollments/${id}/reject`, { reason }),
+    delete: (id) => api.delete(`/enrollments/${id}`),
+  },
+
+  approvals: {
+    list: () => api.get('/approvals'),
+    approveSubscription: (id, data) => api.post(`/approvals/subscriptions/${id}/approve`, data || {}),
+    rejectSubscription: (id, reason) => api.post(`/approvals/subscriptions/${id}/reject`, { reason }),
+    addSubscriptionNow: (id, busId) => api.post(`/approvals/subscriptions/${id}/add-now`, { busId }),
+  },
+
+  transfers: {
+    list: (params) => api.get(`/transfers?${new URLSearchParams(params)}`),
+    create: (data) => api.post("/transfers", data),
+    cancel: (id) => api.delete(`/transfers/${id}`),
+  },
+
+  audit: {
+    list: (params) => api.get(`/audit?${new URLSearchParams(params)}`),
+  },
+
+  sheets: {
+    bus: (busId) => api.get(`/sheets/bus/${busId}`),
+  },
+
+  operations: {
+    generate: (busIds) => api.post("/operations/generate", { busIds }),
+    getToday: () => api.get("/operations/today"),
+    getAvailableBuses: () => api.get("/operations/today/available-buses"),
+    getBusDetail: (busId) => api.get(`/operations/today/bus/${busId}`),
+    updateBusLine: (busId, line) =>
+      api.patch(`/operations/today/bus/${busId}/line`, { line }),
+    addStudent: (busId, studentId) =>
+      api.post(`/operations/today/bus/${busId}/assignments`, { studentId }),
+    removeStudent: (busId, assignmentId) =>
+      api.delete(`/operations/today/bus/${busId}/assignments/${assignmentId}`),
+    updateAssignment: (busId, assignmentId, data) =>
+      api.put(
+        `/operations/today/bus/${busId}/assignments/${assignmentId}`,
+        data,
+      ),
+    updateStatus: (id, status) =>
+      api.patch(`/assignments/${id}/status`, { status }),
+    addBuses: (busIds) => api.post("/operations/today/add-buses", { busIds }),
+    removeBus: (busId) => api.delete(`/operations/today/bus/${busId}`),
+    transferStudent: (fromBusId, toBusId, studentId) =>
+      api.post(`/operations/today/bus/${fromBusId}/transfer`, { toBusId, studentId }),
+    transferAllStudents: (fromBusId, toBusId) =>
+      api.post(`/operations/today/bus/${fromBusId}/transfer-all`, { toBusId }),
+    bulkPickupTime: (busId, adjustment, minutes) =>
+      api.patch(`/operations/today/bus/${busId}/bulk-pickup-time`, { adjustment, minutes }),
+    completeMorning: (busId) => api.post(`/operations/today/bus/${busId}/complete-morning`),
+    cancelTrip: (busId) => api.post(`/operations/today/bus/${busId}/cancel`),
+    getHistory: () => api.get("/operations/history"),
+  },
+
+  tracking: {
+    get: (activeBusId) => api.get(`/tracking/${activeBusId}`),
+    skip: (activeBusId, studentId) => api.post('/tracking/skip', { activeBusId, studentId }),
+    unskip: (activeBusId, studentId) => api.post('/tracking/unskip', { activeBusId, studentId }),
+  },
+
+  emergency: {
+    buses: () => api.get("/emergency/buses"),
+    declareBreakdown: (busId, reason) => api.post("/emergency/breakdown", { busId, reason }),
+    autoTransfer: (fromBusId, toBusIds, reason) => api.post("/emergency/auto-transfer", { fromBusId, toBusIds, reason }),
+    manualTransfer: (fromBusId, transfers, reason) => api.post("/emergency/manual-transfer", { fromBusId, transfers, reason }),
+    replaceBus: (fromBusId, toBusId, reason) => api.post("/emergency/replace-bus", { fromBusId, toBusId, reason }),
+    logs: () => api.get("/emergency/logs"),
+    // V2: Emergency Reports
+    createReport: (busId, reason, notes) => api.post("/emergency/report", { busId, reason, notes }),
+    getPendingReports: () => api.get("/emergency/reports/pending"),
+    approveReport: (id) => api.post(`/emergency/reports/${id}/approve`),
+    rejectReport: (id, rejectionReason) => api.post(`/emergency/reports/${id}/reject`, { rejectionReason }),
+    getDriverReport: (busId) => api.get(`/emergency/report/${busId}`),
+  },
+
+  weeklySheets: {
+    generate: (weekStart) => api.post("/weekly-sheets/generate", { weekStart }),
+    getForWeek: (weekStart) => api.get(`/weekly-sheets/week/${weekStart}`),
+    get: (id) => api.get(`/weekly-sheets/${id}`),
+    delete: (id) => api.delete(`/weekly-sheets/${id}`),
+    getQR: (id) => api.get(`/weekly-sheets/${id}/qr`),
+    getVersions: (id) => api.get(`/weekly-sheets/${id}/versions`),
+    archiveSearch: (params) =>
+      api.get(`/weekly-sheets/archive/search?${new URLSearchParams(params)}`),
+  },
+
+  cart: {
+    get: () => api.get('/student/cart'),
+    addItem: (data) => api.post('/student/cart/items', data),
+    removeItem: (itemId) => api.delete(`/student/cart/items/${itemId}`),
+    submit: (receiptImage) => api.post('/student/cart/submit', { receiptImage }),
+    approvals: {
+      list: () => api.get('/approvals/carts'),
+      get: (id) => api.get(`/approvals/carts/${id}`),
+      approve: (id) => api.post(`/approvals/carts/${id}/approve`),
+      reject: (id, reason) => api.post(`/approvals/carts/${id}/reject`, { reason }),
+    },
+  },
+
+  studentPortal: {
+    getDashboard: () => api.get("/student-portal/dashboard"),
+    getAssignments: () => api.get("/student-portal/assignments"),
+    getSubscriptions: () => api.get("/student-portal/subscriptions"),
+    getPricing: () => api.get("/student-portal/pricing"),
+    getPricingByDestination: (destinationId) => api.get(`/student-portal/pricing-by-destination?destinationId=${destinationId}`),
+    joinReturnQueue: () => api.post("/student-portal/return-queue/join"),
+    notifyNext: () => api.post("/student-portal/notify-next"),
+    subscriptionRequest: (data) => api.post("/student-portal/subscription-request", data),
+  },
+
+  financial: {
+    dashboard: () => api.get("/financial/dashboard"),
+    students: (params) => api.get(`/financial/students?${new URLSearchParams(params)}`),
+    detail: (studentId) => api.get(`/financial/students/${studentId}`),
+    suspend: (studentId, reason) => api.post(`/financial/students/${studentId}/suspend`, { reason }),
+    reactivate: (studentId) => api.post(`/financial/students/${studentId}/reactivate`),
+    grantGrace: (studentId, endDate, reason) => api.post(`/financial/students/${studentId}/grace-period`, { endDate, reason }),
+    cancelGrace: (studentId) => api.post(`/financial/students/${studentId}/cancel-grace-period`),
+    sendReminder: (studentId) => api.post(`/financial/students/${studentId}/send-reminder`),
+  },
+
+  notifications: {
+    list: (params) => api.get(`/notifications${params ? `?${new URLSearchParams(params)}` : ''}`),
+    unreadCount: () => api.get("/notifications/unread-count"),
+    markRead: (id) => api.patch(`/notifications/${id}/read`),
+    markAllRead: () => api.patch("/notifications/read-all"),
+    deleteNotification: (id) => api.delete(`/notifications/${id}`),
+    deleteAll: () => api.delete("/notifications"),
+  },
+
+  messageTemplates: {
+    list: () => api.get("/message-templates"),
+  },
+
+  admin: {
+    resetData: () => api.post("/admin/reset-data"),
+  },
+
+  dailyExceptions: {
+    get: () => api.get("/daily-exceptions"),
+  },
+
+  dailySubscriptions: {
+    manage: () => api.get("/daily-subscriptions/manage"),
+  },
+
+  saturday: {
+    subscriptions: () => api.get('/saturday/subscriptions'),
+    operation: () => api.get('/saturday/operation'),
+    availableBuses: () => api.get('/saturday/available-buses'),
+    create: (busIds) => api.post('/saturday/create', { busIds }),
+    addStudent: (busId, studentId, pickupTime) => api.post(`/saturday/buses/${busId}/students`, { studentId, pickupTime }),
+    removeStudent: (busId, studentId) => api.delete(`/saturday/buses/${busId}/students/${studentId}`),
+    updatePickupTime: (busId, studentId, pickupTime) => api.patch(`/saturday/buses/${busId}/students/${studentId}/pickup-time`, { pickupTime }),
+    close: () => api.post('/saturday/close'),
+    removeBus: (busId) => api.delete(`/saturday/buses/${busId}`),
+  },
+
+  busStudentOrder: {
+    get: (busId, date) =>
+      api.get(`/bus-student-order/bus/${busId}${date ? `?date=${date}` : ""}`),
+    reorder: (busId, studentIds, isTemporary, saveAsDefault) =>
+      api.post(`/bus-student-order/bus/${busId}/reorder`, {
+        studentIds,
+        isTemporary,
+        saveAsDefault,
+      }),
+  },
+};
