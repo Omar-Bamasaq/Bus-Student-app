@@ -1,5 +1,11 @@
 import crypto from 'crypto'
 
+export function safeError(res, error, context = '') {
+  const message = process.env.NODE_ENV === 'production' ? 'خطأ داخلي في الخادم' : error.message
+  if (context) console.error(`[${context}]`, error.message || error)
+  res.status(error.status || 500).json({ error: message })
+}
+
 export function generateRandomPassword(length = 12) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%'
   let password = ''
@@ -19,10 +25,7 @@ export function getAdminInitialPassword() {
   const envPassword = process.env.ADMIN_INITIAL_PASSWORD
   if (envPassword) return envPassword
   if (process.env.NODE_ENV === 'production') {
-    const generated = generateRandomPassword(16)
-    console.log(`\n⚠️  ADMIN_INITIAL_PASSWORD not set. Generated temporary password: ${generated}`)
-    console.log(`   Set ADMIN_INITIAL_PASSWORD environment variable to use a custom password.\n`)
-    return generated
+    throw new Error('ADMIN_INITIAL_PASSWORD environment variable is required in production')
   }
   return '123'
 }

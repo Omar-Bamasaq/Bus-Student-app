@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { authenticate } from '../middleware/auth.js'
+import { safeError } from '../utils/secrets.js'
 import {
   hashPassword, comparePassword, signToken,
   handleLoginAttempt, isAccountLocked, authAudit,
@@ -67,7 +68,7 @@ router.post('/login', async (req, res) => {
     })
   } catch (error) {
     console.error('LOGIN ERROR:', error)
-    res.status(500).json({ error: error.message })
+    safeError(res, error, 'auth/login')
   }
 })
 
@@ -103,7 +104,7 @@ router.post('/change-password', authenticate, async (req, res) => {
 
     res.json({ message: 'تم تغيير كلمة المرور بنجاح', token })
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    safeError(res, error, 'auth/change-password')
   }
 })
 
@@ -120,7 +121,7 @@ router.get('/me', authenticate, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'المستخدم غير موجود' })
     res.json(user)
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    safeError(res, error, 'auth/me')
   }
 })
 

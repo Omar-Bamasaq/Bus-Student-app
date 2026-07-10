@@ -313,12 +313,6 @@ router.post('/load', authorize('admin'), async (req, res) => {
     })
     if (!activeBus) return res.status(404).json({ error: 'الحافلة غير موجودة' })
 
-    /*{[ diagnostic log ]}*/
-    console.log('[return/load] busId:', activeBus.busId, '| studentId:', studentId)
-    console.log('[return/load] status:', activeBus.status, '| operationId:', activeBus.operationId)
-    console.log('[return/load] loads:', activeBus.loads.length, '/ capacity:', activeBus.capacitySnapshot)
-    console.log('[return/load] returnCompletedAt:', activeBus.returnCompletedAt)
-
     if (activeBus.status !== 'AVAILABLE' && activeBus.status !== 'LOADING' && activeBus.status !== 'ARRIVED') {
       return res.status(400).json({ error: 'لا يمكن التحميل على هذه الحافلة حالياً' })
     }
