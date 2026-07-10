@@ -9,6 +9,8 @@
 
 التاريخ | الإصدار | الوصف
 --------|---------|------
+2026-07-10 | — | إصلاحات إنتاجية نهائية قبل النشر
+2026-07-10 | — | إصلاحات إنتاج: safeError, إزالة console.log في prod, إخفاء error.message
 2026-07-10 | — | إزالة كلمات المرور الثابتة + pre-commit hook + secrets utils
 2026-07-10 | — | تجهيز الإنتاج (Production): أمان، توثيق، اختبارات
 2026-07-10 | — | إضافة `extraFeeStart` للرسوم الإضافية في الحملات
@@ -158,6 +160,33 @@
 
 **التصنيف:** أمان
 **Backward Compatibility:** نعم — في بيئة التطوير السلوك مماثل (مع إظهار كلمة المرور)
+
+### إصلاحات إنتاجية نهائية قبل النشر
+
+**الوصف:** معالجة ثغرات logging والتسريب في الإنتاج، واختبار شامل للجاهزية.
+
+**التغييرات:**
+
+1. **`secrets.js`:** في الإنتاج، إذا لم يتم تعيين `ADMIN_INITIAL_PASSWORD` → يرمي خطأ بدلاً من توليد كلمة وطباعتها على stdout
+2. **`safeError(res, error, context)`:** دالة جديدة لإرجاع أخطاء عامة في الإنتاج (`'خطأ داخلي في الخادم'`) مع تسجيل التفاصيل في السيرفر
+3. **`auth.js`:** تحديث 3 مواقع catch لاستخدام `safeError` (login, change-password, me)
+4. **`return.js`:** إزالة 4 أسطر `console.log` تشخيصية من مسار `/return/load`
+
+**نتائج الفحص النهائي:**
+
+| الاختبار | النتيجة |
+|----------|---------|
+| `npm install` نظيف من الصفر | ✅ 0 ثغرات |
+| `npm run build` (frontend) | ✅ بنجاح (تحذير حجم chunk فقط) |
+| `npx prisma migrate status` | ✅ 5 migrations, up to date |
+| Admin login (admin1/123) | ✅ 200 OK |
+| Change password (123 → Admin@2026Strong) | ✅ 200 OK |
+| Re-login with new password | ✅ 200 OK |
+| Profile /me | ✅ 200 OK |
+| حقول .env المطلوبة موثقة | ✅ 9/9 variables |
+
+**التصنيف:** إنتاج
+**Backward Compatibility:** نعم
 
 ---
 
