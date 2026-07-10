@@ -9,6 +9,7 @@
 
 التاريخ | الإصدار | الوصف
 --------|---------|------
+2026-07-10 | — | إزالة كلمات المرور الثابتة + pre-commit hook + secrets utils
 2026-07-10 | — | تجهيز الإنتاج (Production): أمان، توثيق، اختبارات
 2026-07-10 | — | إضافة `extraFeeStart` للرسوم الإضافية في الحملات
 2026-07-04 | — | إنشاء PROJECT_SPECIFICATION.md و CHANGELOG.md
@@ -107,6 +108,56 @@
 
 **التصنيف:** مهام إنتاج
 **Backward Compatibility:** نعم
+
+### إزالة كلمات المرور الثابتة + pre-commit hook + secrets utils
+
+**الوصف:** مراجعة شاملة لجميع كلمات المرور الثابتة في الكود، وإضافة أدوات أمان للمستودع.
+
+**التغييرات:**
+
+**1. `backend/src/utils/secrets.js` (جديد):**
+- `generateRandomPassword(length)` — كلمة مرور عشوائية 12 حرف (أحرف كبيرة/صغيرة + أرقام + رموز)
+- `requireDev(message)` — يرمي خطأ إذا `NODE_ENV=production`
+- `getAdminInitialPassword()` — يقرأ `ADMIN_INITIAL_PASSWORD` من البيئة، في الإنتاج يولد كلمة عشوائية ويطبعها
+
+**2. `backend/prisma/seed.js`:**
+- يمنع التشغيل في الإنتاج (`requireDev`)
+- كلمة مرور الأدمن من `getAdminInitialPassword()`
+- كلمات مرور السائقين عشوائية
+- الطلاب الجدد: `phone || generateRandomPassword()`
+
+**3. `backend/src/routes/students.js`:**
+- `let defaultPassword = phone || generateRandomPassword()` بدلاً من `'12345678'`
+
+**4. `backend/src/routes/buses.js`:**
+- موضعان: `primaryPhone || generateRandomPassword()` بدلاً من `'12345678'`
+
+**5. `backend/src/routes/users.js`:**
+- الأدمن: `getAdminInitialPassword()`
+- الطالب/السائق: `phone || generateRandomPassword()`
+- الباقي: `generateRandomPassword()`
+
+**6. `backend/src/services/resetService.js`:**
+- `seedDemoData()` يمنع التشغيل في الإنتاج
+- كلمة مرور السائق التجريبي عشوائية بدلاً من `'123456'`
+
+**7. `backend/scripts/reset_admin_password.js`:**
+- يمنع التشغيل في الإنتاج
+- يستخدم `ADMIN_INITIAL_PASSWORD` أو يولد عشوائياً ويطبعه
+
+**8. `.githooks/pre-commit` (جديد):**
+- يفحص الملفات المضافة قبل كل commit
+- يمنع commit إذا وجد `.env` (غير `.env.example`)
+- يمنع commit إذا وجد `DATABASE_URL` حقيقي (ليس placeholder)
+- يمنع commit إذا وجد `JWT_SECRET` حقيقي (ليس placeholder)
+- يحذر إذا وجد كلمة مرور ثابتة في الكود الجديد
+- مفعّل عبر `git config core.hooksPath .githooks`
+
+**9. `backend/.env.example`:**
+- إضافة `ADMIN_INITIAL_PASSWORD`
+
+**التصنيف:** أمان
+**Backward Compatibility:** نعم — في بيئة التطوير السلوك مماثل (مع إظهار كلمة المرور)
 
 ---
 
