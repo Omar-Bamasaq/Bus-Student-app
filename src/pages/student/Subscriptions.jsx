@@ -96,23 +96,24 @@ export default function Subscriptions() {
         )
         setCampaigns(subCamps)
         const priceMap = {}
-        subCamps.forEach(c => {
-          if (c.basePrice !== undefined) {
+        await Promise.allSettled(subCamps.map(async (c) => {
+          try {
+            const p = await api.studentPortal.campaignPrice(c.id)
             priceMap[c.id] = {
-              basePrice: c.basePrice,
-              discount: c.discountAmount,
-              discountedPrice: c.discountedPrice,
-              surcharge: c.surcharge,
-              hasDiscount: c.hasDiscount,
+              basePrice: p.basePrice,
+              discount: p.discountAmount,
+              discountedPrice: Math.max(0, p.basePrice - p.discountAmount),
+              surcharge: p.surcharge || 0,
+              hasDiscount: p.hasDiscount,
               extraFee: {
-                type: c.extraFeeType,
-                amount: c.extraFeeAmount,
-                label: c.extraFeeLabel,
+                type: p.feeType,
+                amount: p.feeAmount,
+                label: p.feeLabel,
               },
-              finalAmount: c.finalAmount,
+              finalAmount: p.finalAmount,
             }
-          }
-        })
+          } catch {}
+        }))
         setCampaignPrices(priceMap)
       }
       if (enrsResult.status === 'fulfilled') {
@@ -240,7 +241,19 @@ export default function Subscriptions() {
     setCampaignSuccess('')
     setCampaignSubmitting(true)
     try {
-      const price = campaignPrices[campaign.id] || await api.pricing.calculate(campaign.id)
+      let price = campaignPrices[campaign.id]
+      if (!price) {
+        const p = await api.studentPortal.campaignPrice(campaign.id)
+        price = {
+          basePrice: p.basePrice,
+          discount: p.discountAmount,
+          discountedPrice: Math.max(0, p.basePrice - p.discountAmount),
+          surcharge: p.surcharge || 0,
+          hasDiscount: p.hasDiscount,
+          extraFee: { type: p.feeType, amount: p.feeAmount, label: p.feeLabel },
+          finalAmount: p.finalAmount,
+        }
+      }
       const plan = campaign.type === 'subscription_3weeks' ? 'THREE_WEEKS' : 'FOUR_WEEKS'
       const weeksCount = plan === 'THREE_WEEKS' ? 3 : 4
       const today = new Date()

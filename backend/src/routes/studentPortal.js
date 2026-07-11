@@ -5,6 +5,7 @@ import { expireSubscriptions, hasActiveSameTypeSubscription, createSubscriptionN
 import { createAndBroadcast } from '../services/notificationService.js'
 import { getLocalDate, formatLocalDate, resolveDailyExecutionDates } from '../utils/dateUtils.js'
 import { getStudentOperationStage, Stage } from '../services/operationStage.js'
+import { calculateFinalSubscriptionPrice } from '../services/pricingService.js'
 
 const router = Router()
 router.use(authenticate)
@@ -158,6 +159,47 @@ router.get('/pricing-by-destination', async (req, res) => {
       },
     })
     res.json(zones)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.get('/campaign-price/:campaignId', async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'غير مصرح' })
+
+    const studentId = await resolveStudentId(req.user)
+    if (!studentId) return res.status(404).json({ error: 'الطالب غير موجود' })
+
+    const { campaignId } = req.params
+    if (!campaignId) return res.status(400).json({ error: 'معرّف الحملة مطلوب' })
+
+    const [campaign, student] = await Promise.all([
+      prisma.campaign.findUnique({ where: { id: campaignId } }),
+      prisma.student.findUnique({ where: { id: studentId } }),
+    ])
+    if (!campaign) return res.status(404).json({ error: 'الحملة غير موجودة' })
+    if (!student) return res.status(404).json({ error: 'الطالب غير موجود' })
+    if (!student.zone) return res.status(400).json({ error: 'لم يتم تحديد منطقتك بعد' })
+
+    const zonePricing = await prisma.pricingArea.findUnique({
+      where: { name: student.zone },
+      include: { prices: { where: { destinationId: student.destinationId || null } } },
+    })
+    if (!zonePricing) return res.status(400).json({ error: 'لم يتم العثور على منطقة التسعير' })
+
+    const price = await calculateFinalSubscriptionPrice(student, campaign, zonePricing)
+
+    res.json({
+      basePrice: price.basePrice,
+      discountAmount: price.discount,
+      hasDiscount: price.hasDiscount,
+      feeType: price.extraFee?.type || null,
+      feeLabel: price.extraFee?.label || null,
+      feeAmount: price.extraFee?.amount || 0,
+      surcharge: price.surcharge,
+      finalAmount: price.finalAmount,
+    })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }

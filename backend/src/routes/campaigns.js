@@ -3,7 +3,6 @@ import { prisma } from '../lib/prisma.js'
 import { authenticate, authorize } from '../middleware/auth.js'
 import { createAuditLog } from '../lib/audit.js'
 import { createAndBroadcast } from '../services/notificationService.js'
-import { calculateFinalSubscriptionPrice } from '../services/pricingService.js'
 
 const router = Router()
 router.use(authenticate)
@@ -37,43 +36,7 @@ router.get('/active', async (req, res) => {
       where: { status: 'ACTIVE', isActive: true, endDate: { gte: today } },
       orderBy: { startDate: 'asc' },
     })
-
-    let enriched = campaigns
-    if (req.user.role === 'student' && req.user.studentId) {
-      const student = await prisma.student.findUnique({ where: { id: req.user.studentId } })
-      if (student && student.zone) {
-        const zonePricing = await prisma.pricingArea.findUnique({
-          where: { name: student.zone },
-          include: { prices: { where: { destinationId: student.destinationId || null } } },
-        })
-        if (zonePricing) {
-          enriched = await Promise.all(campaigns.map(async (campaign) => {
-            try {
-              const price = await calculateFinalSubscriptionPrice(student, campaign, zonePricing)
-              return {
-                ...campaign,
-                basePrice: price.basePrice,
-                discountAmount: price.discount,
-                discountedPrice: price.discountedPrice,
-                surcharge: price.surcharge,
-                hasDiscount: price.hasDiscount,
-                extraFeeType: price.extraFee?.type || null,
-                extraFeeAmount: price.extraFee?.amount || 0,
-                extraFeeLabel: price.extraFee?.label || null,
-                newStudentFee: price.extraFee?.type === 'NEW_STUDENT' ? price.extraFee.amount : 0,
-                lateFee: price.extraFee?.type === 'LATE_REGISTRATION' ? price.extraFee.amount : 0,
-                lateFeeStartAt: campaign.extraFeeStart,
-                finalAmount: price.finalAmount,
-              }
-            } catch {
-              return campaign
-            }
-          }))
-        }
-      }
-    }
-
-    res.json(enriched)
+    res.json(campaigns)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }

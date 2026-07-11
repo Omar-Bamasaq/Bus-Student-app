@@ -310,6 +310,7 @@ export const api = {
     joinReturnQueue: () => api.post("/student-portal/return-queue/join"),
     notifyNext: () => api.post("/student-portal/notify-next"),
     subscriptionRequest: (data) => api.post("/student-portal/subscription-request", data),
+    campaignPrice: (campaignId) => api.get(`/student-portal/campaign-price/${campaignId}`),
   },
 
   financial: {
