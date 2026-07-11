@@ -25,9 +25,17 @@ export async function isNewStudent(studentId) {
 }
 
 export function isLateRegistration(campaign) {
-  if (!campaign.hasEarlyDiscount || !campaign.discountExpiry) return false
   const now = new Date()
-  return now > new Date(campaign.discountExpiry)
+
+  if (campaign.extraFeeStart && now > new Date(campaign.extraFeeStart)) {
+    return true
+  }
+
+  if (campaign.hasEarlyDiscount && campaign.discountExpiry && now > new Date(campaign.discountExpiry)) {
+    return true
+  }
+
+  return false
 }
 
 export async function computeExtraRegistrationFee(campaign, studentId) {
