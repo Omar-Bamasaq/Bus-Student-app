@@ -148,7 +148,14 @@ export default function AdminDestinations() {
             {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
           </div>
         ) : destinations.length === 0 ? (
-          <EmptyState icon={MapPin} title="لا توجد وجهات" description="أضف وجهة جديدة للبدء" />
+          <div className="space-y-4">
+            <EmptyState icon={MapPin} title="لا توجد وجهات" description="أضف وجهة جديدة للبدء" />
+            <div className="flex justify-center">
+              <button onClick={openAdd} className="btn-primary">
+                <Plus size={16} /> إضافة وجهة جديدة
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="grid gap-4">
             {destinations.map(dest => (
