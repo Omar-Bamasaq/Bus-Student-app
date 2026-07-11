@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma.js'
 import { authenticate, authorize } from '../middleware/auth.js'
 import { createSubscriptionNotification } from '../services/subscriptionService.js'
 import { createAndBroadcast } from '../services/notificationService.js'
-import { computeExtraRegistrationFee } from '../services/campaignService.js'
+import { calculateFinalSubscriptionPrice } from '../services/pricingService.js'
 
 const router = Router()
 router.use(authenticate)
@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     let { campaignId, studentId, areaId, baseAmount, surcharge, discount, finalAmount, receiptImage } = req.body
-    if (!campaignId || !studentId || baseAmount == null) {
+    if (!campaignId || !studentId || baseAmount == null || finalAmount == null) {
       return res.status(400).json({ error: 'البيانات غير كاملة' })
     }
     if (req.user.role === 'student') {
@@ -51,10 +51,22 @@ router.post('/', async (req, res) => {
       if (!sid || sid !== studentId) return res.status(403).json({ error: 'غير مصرح' })
     }
 
-    const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } })
+    const [campaign, student] = await Promise.all([
+      prisma.campaign.findUnique({ where: { id: campaignId } }),
+      prisma.student.findUnique({ where: { id: studentId } }),
+    ])
     if (!campaign) return res.status(404).json({ error: 'الحملة غير موجودة' })
+    if (!student) return res.status(404).json({ error: 'الطالب غير موجود' })
 
-    const extraFee = await computeExtraRegistrationFee(campaign, studentId)
+    const zonePricing = student.zone
+      ? await prisma.pricingArea.findUnique({
+          where: { name: student.zone },
+          include: { prices: { where: { destinationId: student.destinationId || null } } },
+        })
+      : null
+
+    const calculated = await calculateFinalSubscriptionPrice(student, campaign, zonePricing)
+    const extraFee = { type: calculated.extraFee.type, amount: calculated.extraFee.amount, label: calculated.extraFee.label }
 
     const existingEnrollments = await prisma.campaignEnrollment.findMany({
       where: { campaignId, studentId },
@@ -71,18 +83,13 @@ router.post('/', async (req, res) => {
       }
     }
 
-    const computedDiscount = Math.max(0, Number(discount || 0))
-    const computedSurcharge = Math.max(0, Number(surcharge || 0))
-    const computedExtraAmount = extraFee.amount || 0
-    const computedFinal = Number(baseAmount) - computedDiscount + computedSurcharge + computedExtraAmount
-
     const enrollment = await prisma.campaignEnrollment.create({
       data: {
         campaignId, studentId, areaId: areaId || null,
-        baseAmount, surcharge: computedSurcharge, discount: computedDiscount,
+        baseAmount, surcharge: surcharge || 0, discount: discount || 0,
         extraFeeType: extraFee.type,
         extraFeeAmount: extraFee.amount || null,
-        finalAmount: finalAmount != null ? Math.max(Number(finalAmount), computedFinal) : computedFinal,
+        finalAmount,
         receiptImage: receiptImage || null,
       },
       include: {

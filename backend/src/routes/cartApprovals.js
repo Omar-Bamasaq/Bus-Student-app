@@ -136,20 +136,22 @@ router.post('/:id/approve', authorize('admin'), async (req, res) => {
         subscriptions.push(sub)
       } else {
         const weeksCount = itemData.weeksCount || (type === 'THREE_WEEKS' ? 3 : 4)
-        const today = getLocalDate()
-        const startDate = new Date(today)
-        const endDate = new Date(today)
-        endDate.setDate(endDate.getDate() + weeksCount * 7 - 1)
+        const snapshot = itemData.priceSnapshot
+        const startDate = itemData.startDate ? new Date(itemData.startDate) : new Date(getLocalDate())
+        const endDate = itemData.endDate ? new Date(itemData.endDate) : new Date(startDate)
+        if (!itemData.endDate) endDate.setDate(endDate.getDate() + weeksCount * 7 - 1)
 
         const conflict = await hasActiveSameTypeSubscription(cart.studentId, type, { startDate, endDate })
         if (conflict) {
           throw new Error('لديك اشتراك أسبوعي يتداخل مع فترة الاشتراك المطلوبة')
         }
 
-        const notesObj = { type: 'cart_item', cartId: cart.id }
-        if (itemData.extraFeeType && itemData.extraFeeAmount) {
-          notesObj.extraFeeType = itemData.extraFeeType
-          notesObj.extraFeeAmount = itemData.extraFeeAmount
+        const notesObj = { type: 'cart_item', cartId: cart.id, priceSnapshot: snapshot || {} }
+        const feeType = snapshot?.feeType || itemData.extraFeeType
+        const feeAmount = snapshot?.additionalFee || itemData.extraFeeAmount
+        if (feeType && feeAmount) {
+          notesObj.extraFeeType = feeType
+          notesObj.extraFeeAmount = feeAmount
         }
         const sub = await prisma.subscription.create({
           data: {

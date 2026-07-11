@@ -42,6 +42,7 @@ export default function Subscriptions() {
   const [student, setStudent] = useState(null)
   const [campaigns, setCampaigns] = useState([])
   const [enrollments, setEnrollments] = useState([])
+  const [campaignPrices, setCampaignPrices] = useState({})
   const [loading, setLoading] = useState(true)
 
   const [dailyWeeks, setDailyWeeks] = useState(1)
@@ -94,6 +95,14 @@ export default function Subscriptions() {
           c => c.type === 'subscription_3weeks' || c.type === 'subscription_4weeks'
         )
         setCampaigns(subCamps)
+        const priceMap = {}
+        await Promise.allSettled(subCamps.map(async (c) => {
+          try {
+            const p = await api.pricing.calculate(c.id)
+            priceMap[c.id] = p
+          } catch {}
+        }))
+        setCampaignPrices(priceMap)
       }
       if (enrsResult.status === 'fulfilled') {
         setEnrollments(Array.isArray(enrsResult.value) ? enrsResult.value : [])
@@ -220,7 +229,7 @@ export default function Subscriptions() {
     setCampaignSuccess('')
     setCampaignSubmitting(true)
     try {
-      const price = getCampaignPrice(campaign)
+      const price = campaignPrices[campaign.id] || await api.pricing.calculate(campaign.id)
       const plan = campaign.type === 'subscription_3weeks' ? 'THREE_WEEKS' : 'FOUR_WEEKS'
       const weeksCount = plan === 'THREE_WEEKS' ? 3 : 4
       const today = new Date()
@@ -232,7 +241,7 @@ export default function Subscriptions() {
         weeksCount,
         campaignId: campaign.id,
         campaignTitle: campaign.title,
-        baseAmount: price.baseAmount,
+        baseAmount: price.basePrice,
         discount: price.discount,
         startDate: snapStart.toISOString(),
         endDate: snapEnd.toISOString(),
@@ -260,75 +269,8 @@ export default function Subscriptions() {
     }
   }
 
-  function isEarlyDiscountActive(campaign) {
-    if (!campaign.hasEarlyDiscount) return false
-    if (!campaign.discountStart || !campaign.discountExpiry) return false
-    if (!campaign.discountAmount || Number(campaign.discountAmount) <= 0) return false
-    const now = new Date()
-    const start = new Date(campaign.discountStart)
-    const end = new Date(campaign.discountExpiry)
-    return now >= start && now <= end
-  }
-
-  function isLateRegistration(campaign) {
-    if (!campaign.hasEarlyDiscount || !campaign.discountExpiry) return false
-    return new Date() > new Date(campaign.discountExpiry)
-  }
-
-  function isNewStudent() {
-    const hasActiveOrExpiredSub = subscriptions.some(s => s.status === 'active' || s.status === 'expired')
-    if (hasActiveOrExpiredSub) return false
-    const hasApprovedEnrollment = enrollments.some(e => e.receiptStatus === 'APPROVED')
-    if (hasApprovedEnrollment) return false
-    return true
-  }
-
-  function getExtraFeeInfo(campaign) {
-    if (!campaign.enableExtraRegistrationFee) {
-      return { type: null, amount: 0, label: null }
-    }
-    if (campaign.extraFeeStart && new Date() < new Date(campaign.extraFeeStart)) {
-      return { type: null, amount: 0, label: null }
-    }
-    if (isLateRegistration(campaign)) {
-      return { type: 'LATE_REGISTRATION', amount: Number(campaign.extraRegistrationFee), label: 'رسوم طالب متأخر' }
-    }
-    if (isNewStudent()) {
-      return { type: 'NEW_STUDENT', amount: Number(campaign.extraRegistrationFee), label: 'رسوم طالب جديد' }
-    }
-    return { type: null, amount: 0, label: null }
-  }
-
   function getCampaignPrice(campaign) {
-    const plan = campaign.type === 'subscription_3weeks' ? 'THREE_WEEKS' : 'FOUR_WEEKS'
-    // Prefer destination-specific prices (destZonePricing) then fall back to zone defaults
-    const pricingRow = destZonePricing?.prices?.find(p => p.plan === plan) || zonePricing?.prices?.find(p => p.plan === plan)
-    // If still not found, fall back to zone-level default fields
-    const baseAmount = pricingRow ? Number(pricingRow.price) : (plan === 'THREE_WEEKS' ? Number(zonePricing?.threeWeeksPrice || 0) : Number(zonePricing?.fourWeeksPrice || 0))
-    const surcharge = student?.homeDeliveryActive
-      ? Number(
-          plan === 'THREE_WEEKS'
-            ? (student.homeDeliveryFeeThreeWeeks != null && Number(student.homeDeliveryFeeThreeWeeks) > 0
-                ? student.homeDeliveryFeeThreeWeeks
-                : (zonePricing?.homeMediumSurcharge || 0))
-            : (student.homeDeliveryFeeFourWeeks != null && Number(student.homeDeliveryFeeFourWeeks) > 0
-                ? student.homeDeliveryFeeFourWeeks
-                : (zonePricing?.homeFarSurcharge || 0))
-        )
-      : 0
-
-    const originalPrice = baseAmount
-    const earlyDiscount = isEarlyDiscountActive(campaign)
-    let discountVal = 0
-    let discountedPrice = originalPrice
-    if (earlyDiscount) {
-      discountVal = Number(campaign.discountAmount) || 0
-      discountedPrice = Math.max(0, originalPrice - discountVal)
-    }
-
-    const extraFee = getExtraFeeInfo(campaign)
-    const finalAmount = discountedPrice + surcharge + extraFee.amount
-    return { baseAmount, surcharge, discount: discountVal, discountedPrice, finalAmount, originalPrice, hasDiscount: earlyDiscount, extraFee }
+    return campaignPrices[campaign.id]
   }
 
   function getExistingEnrollment(campaignId) {
@@ -396,13 +338,13 @@ export default function Subscriptions() {
     const price = getCampaignPrice(campaign)
     const isEnrolling = campaignEnrolling === campaign.id
     const existingEnrollment = getExistingEnrollment(campaign.id)
-    const hasActiveDiscount = price.hasDiscount
+    const hasActiveDiscount = price?.hasDiscount || false
     const displayOriginal = existingEnrollment
       ? Number(existingEnrollment.baseAmount)
-      : price.baseAmount
+      : (price?.basePrice || 0)
     const displayPrice = existingEnrollment
       ? (Number(existingEnrollment.baseAmount) - Number(existingEnrollment.discount || 0))
-      : price.discountedPrice
+      : (price?.discountedPrice || 0)
 
     return (
       <div className={`rounded-lg border p-2.5 ${isUpcoming ? 'border-amber-200 bg-amber-50/30' : hasActiveDiscount ? 'border-green-200 bg-green-50/30' : 'border-slate-200'}`}>
@@ -450,18 +392,18 @@ export default function Subscriptions() {
               <span className="text-[var(--color-primary)]">{displayOriginal.toLocaleString()} ريال</span>
             </div>
           )}
-          {(existingEnrollment ? Number(existingEnrollment.surcharge || 0) : Number(price.surcharge || 0)) > 0 && (
+          {(existingEnrollment ? Number(existingEnrollment.surcharge || 0) : Number(price?.surcharge || 0)) > 0 && (
             <div className="flex justify-between text-slate-600 mt-0.5">
               <span>رسوم التوصيل المنزلي:</span>
-              <span className="font-medium">{(existingEnrollment ? Number(existingEnrollment.surcharge) : Number(price.surcharge)).toLocaleString()} ريال</span>
+              <span className="font-medium">{(existingEnrollment ? Number(existingEnrollment.surcharge) : Number(price?.surcharge)).toLocaleString()} ريال</span>
             </div>
           )}
           {(() => {
-            const efType = existingEnrollment ? existingEnrollment.extraFeeType : price.extraFee?.type
-            const efAmount = existingEnrollment ? Number(existingEnrollment.extraFeeAmount || 0) : (price.extraFee?.amount || 0)
+            const efType = existingEnrollment ? existingEnrollment.extraFeeType : (price?.extraFee?.type || null)
+            const efAmount = existingEnrollment ? Number(existingEnrollment.extraFeeAmount || 0) : (price?.extraFee?.amount || 0)
             const efLabel = existingEnrollment
               ? (efType === 'NEW_STUDENT' ? 'رسوم طالب جديد' : efType === 'LATE_REGISTRATION' ? 'رسوم طالب متأخر' : null)
-              : price.extraFee?.label || null
+              : price?.extraFee?.label || null
             if (efType && efAmount > 0) {
               return (
                 <div className="flex justify-between text-slate-600 mt-0.5">
@@ -474,7 +416,7 @@ export default function Subscriptions() {
           })()}
           <div className="flex justify-between font-bold text-slate-800 pt-1 border-t border-slate-100 mt-0.5">
             <span>الإجمالي</span>
-            <span className="text-[var(--color-primary)]">{Number(existingEnrollment ? existingEnrollment.finalAmount : price.finalAmount).toLocaleString()} ريال</span>
+            <span className="text-[var(--color-primary)]">{Number(existingEnrollment ? existingEnrollment.finalAmount : (price?.finalAmount || 0)).toLocaleString()} ريال</span>
           </div>
         </div>
 
@@ -637,15 +579,7 @@ export default function Subscriptions() {
           <h3 className="text-xs font-bold text-slate-700 mb-2">الاشتراكات الأسبوعية النشطة</h3>
           {activeWeeklySubscriptions.length > 0 ? (
             <div className="space-y-1.5">
-              {activeWeeklySubscriptions.map(sub => {
-                const subNotes = (() => {
-                  try { return JSON.parse(sub.notes || '{}') } catch { return {} }
-                })()
-                const extraFeeType = subNotes.extraFeeType || null
-                const extraFeeAmount = Number(subNotes.extraFeeAmount || 0)
-                const amount = Number(sub.amount)
-                const hdf = sub.homeDeliveryFee ? Number(sub.homeDeliveryFee) : 0
-                return (
+              {activeWeeklySubscriptions.map(sub => (
                 <div key={sub.id} className="rounded-lg border border-slate-200 p-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -659,33 +593,8 @@ export default function Subscriptions() {
                     </div>
                     <StatusBadge status={sub.status} />
                   </div>
-                  <div className="mt-1.5 pt-1.5 border-t border-slate-100 space-y-0.5 text-[10px] text-slate-600">
-                    <div className="flex justify-between">
-                      <span>المبلغ</span>
-                      <span className="font-medium text-slate-800">{amount.toLocaleString()} ريال</span>
-                    </div>
-                    {hdf > 0 && (
-                      <div className="flex justify-between">
-                        <span>رسوم التوصيل</span>
-                        <span className="font-medium">{hdf.toLocaleString()} ريال</span>
-                      </div>
-                    )}
-                    {extraFeeType && extraFeeAmount > 0 && (
-                      <div className="flex justify-between">
-                        <span>{extraFeeType === 'NEW_STUDENT' ? 'رسوم طالب جديد' : 'رسوم طالب متأخر'}</span>
-                        <span className="font-medium text-amber-600">+{extraFeeAmount.toLocaleString()} ريال</span>
-                      </div>
-                    )}
-                    {Number(sub.paidAmount) > 0 && (
-                      <div className="flex justify-between font-medium text-green-600">
-                        <span>المدفوع</span>
-                        <span>{Number(sub.paidAmount).toLocaleString()} ريال</span>
-                      </div>
-                    )}
-                  </div>
                 </div>
-                )
-              })}
+              ))}
             </div>
           ) : (
             <p className="text-xs text-slate-400">لا توجد اشتراكات أسبوعية نشطة</p>

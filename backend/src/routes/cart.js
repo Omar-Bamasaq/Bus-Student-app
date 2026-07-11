@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth.js'
 import { hasActiveSameTypeSubscription } from '../services/subscriptionService.js'
 import { getLocalDate } from '../utils/dateUtils.js'
 import { createAndBroadcast } from '../services/notificationService.js'
+import { calculateFinalSubscriptionPrice } from '../services/pricingService.js'
 
 const router = Router()
 router.use(authenticate)
@@ -82,6 +83,35 @@ router.post('/items', async (req, res) => {
       return res.status(400).json({ error: msg })
     }
 
+    let savedData = { ...itemData }
+    if (type !== 'DAILY' && itemData.campaignId) {
+      const [campaign, zonePricing] = await Promise.all([
+        prisma.campaign.findUnique({ where: { id: itemData.campaignId } }),
+        student.zone
+          ? prisma.pricingArea.findUnique({
+              where: { name: student.zone },
+              include: { prices: { where: { destinationId: student.destinationId || null } } },
+            })
+          : null,
+      ])
+      if (campaign && zonePricing) {
+        const calculated = await calculateFinalSubscriptionPrice(student, campaign, zonePricing)
+        if (Math.abs(Number(calculated.finalAmount) - Number(amount)) > 1) {
+          return res.status(400).json({ error: 'تغير السعر، يرجى تحديث الصفحة' })
+        }
+        savedData = {
+          ...savedData,
+          priceSnapshot: {
+            basePrice: calculated.basePrice,
+            discount: calculated.discount,
+            additionalFee: calculated.extraFee.amount,
+            feeType: calculated.extraFee.type,
+            finalAmount: calculated.finalAmount,
+          },
+        }
+      }
+    }
+
     const cart = await getOrCreateDraftCart(studentId)
 
     const item = await prisma.cartItem.create({
@@ -92,7 +122,7 @@ router.post('/items', async (req, res) => {
         destinationId: destinationId || null,
         amount,
         homeDeliveryFee: homeDeliveryFee || null,
-        data: data || {},
+        data: savedData,
       },
       include: { zone: { select: { id: true, name: true } }, destination: { select: { id: true, name: true } } },
     })

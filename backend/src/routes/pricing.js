@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { authenticate, authorize } from '../middleware/auth.js'
-import { getPrice, ensurePricingRows } from '../services/pricingService.js'
+import { getPrice, ensurePricingRows, calculateFinalSubscriptionPrice } from '../services/pricingService.js'
 
 const router = Router()
 router.use(authenticate)
@@ -68,6 +68,36 @@ router.get('/zones/:id', authorize('admin'), async (req, res) => {
     const zone = await loadZoneWithPrices(req.params.id)
     if (!zone) return res.status(404).json({ error: 'المنطقة غير موجودة' })
     res.json(zone)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.get('/calculate', async (req, res) => {
+  try {
+    if (req.user.role !== 'student') return res.status(403).json({ error: 'غير مصرح' })
+    const studentId = req.user.studentId
+    if (!studentId) return res.status(404).json({ error: 'الطالب غير موجود' })
+
+    const { campaignId } = req.query
+    if (!campaignId) return res.status(400).json({ error: 'معرّف الحملة مطلوب' })
+
+    const [campaign, student] = await Promise.all([
+      prisma.campaign.findUnique({ where: { id: campaignId } }),
+      prisma.student.findUnique({ where: { id: studentId } }),
+    ])
+    if (!campaign) return res.status(404).json({ error: 'الحملة غير موجودة' })
+    if (!student) return res.status(404).json({ error: 'الطالب غير موجود' })
+    if (!student.zone) return res.status(400).json({ error: 'لم يتم تحديد منطقتك بعد' })
+
+    const zonePricing = await prisma.pricingArea.findUnique({
+      where: { name: student.zone },
+      include: { prices: { where: { destinationId: student.destinationId || null } } },
+    })
+    if (!zonePricing) return res.status(400).json({ error: 'لم يتم العثور على منطقة التسعير' })
+
+    const price = await calculateFinalSubscriptionPrice(student, campaign, zonePricing)
+    res.json(price)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }

@@ -185,6 +185,7 @@ export const api = {
       api.post("/pricing/copy", { sourceZoneId, targetZoneId }),
     getPrice: (zoneId, destinationId, plan) =>
       api.get(`/pricing/price?${new URLSearchParams({ zoneId, destinationId: destinationId || '', plan })}`),
+    calculate: (campaignId) => api.get(`/pricing/calculate?campaignId=${campaignId}`),
   },
 
   campaigns: {
