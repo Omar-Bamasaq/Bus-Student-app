@@ -60,9 +60,26 @@ router.post('/items', async (req, res) => {
     const student = await prisma.student.findUnique({ where: { id: studentId } })
     if (!student) return res.status(404).json({ error: 'الطالب غير موجود' })
 
-    const activeSame = await hasActiveSameTypeSubscription(studentId, type)
-    if (activeSame) {
-      return res.status(400).json({ error: 'لديك اشتراك نشط من هذا النوع بالفعل' })
+    const itemData = data || {}
+    let conflict
+    if (type === 'DAILY') {
+      const dates = itemData.computedDates
+        ? itemData.computedDates.map(d => new Date(d))
+        : null
+      conflict = await hasActiveSameTypeSubscription(studentId, type, { dates })
+    } else {
+      const weeksCount = itemData.weeksCount || (type === 'THREE_WEEKS' ? 3 : 4)
+      const today = getLocalDate()
+      const newStart = new Date(today)
+      const newEnd = new Date(today)
+      newEnd.setDate(newEnd.getDate() + weeksCount * 7 - 1)
+      conflict = await hasActiveSameTypeSubscription(studentId, type, { startDate: newStart, endDate: newEnd })
+    }
+    if (conflict) {
+      const msg = type === 'DAILY'
+        ? 'لديك اشتراك يومي في أحد هذه الأيام، يرجى مراجعة التواريخ المختارة'
+        : 'لديك اشتراك أسبوعي يتداخل مع فترة الاشتراك المطلوبة'
+      return res.status(400).json({ error: msg })
     }
 
     const cart = await getOrCreateDraftCart(studentId)

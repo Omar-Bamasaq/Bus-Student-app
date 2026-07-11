@@ -181,40 +181,60 @@ export async function expireSubscriptions() {
   return { count: expiredSubscriptions.length }
 }
 
-export async function hasActiveSameTypeSubscription(studentId, type, referenceDate = new Date()) {
-  const today = startOfDay(referenceDate)
-  const where = { studentId, type, status: 'active' }
-
+export async function hasActiveSameTypeSubscription(studentId, type, options = {}) {
   if (type === 'DAILY') {
-    const hasExecDate = await prisma.dailyExecutionDate.count({
-      where: {
-        subscription: { ...where },
-        executionDate: { gte: today },
-      },
-    })
-    if (hasExecDate > 0) return true
+    const newDates = options.dates
+    if (!newDates || newDates.length === 0) {
+      const today = startOfDay(new Date())
+      const count = await prisma.dailyExecutionDate.count({
+        where: {
+          subscription: { studentId, type: 'DAILY', status: 'active' },
+          executionDate: { gte: today },
+        },
+      })
+      return count > 0
+    }
 
-    const existing = await prisma.subscription.findFirst({
+    const normalizedNew = newDates.map(d => startOfDay(d).getTime())
+    const existing = await prisma.dailyExecutionDate.findMany({
       where: {
-        ...where,
-        OR: [
-          { executionDate: today },
-          { AND: [{ executionDate: null }, { startDate: { lte: today } }, { endDate: { gte: today } }] },
-        ],
+        subscription: { studentId, type: 'DAILY', status: 'active' },
       },
+      select: { executionDate: true },
+    })
+
+    for (const ed of existing) {
+      const existingTime = startOfDay(ed.executionDate).getTime()
+      if (normalizedNew.includes(existingTime)) return { conflict: true, date: ed.executionDate }
+    }
+    return false
+  }
+
+  const newStart = options.startDate ? startOfDay(options.startDate) : null
+  const newEnd = options.endDate ? startOfDay(options.endDate) : null
+
+  if (!newStart || !newEnd) {
+    const today = startOfDay(new Date())
+    const existing = await prisma.subscription.findFirst({
+      where: { studentId, type, status: 'active', startDate: { lte: today }, endDate: { gte: today } },
     })
     return Boolean(existing)
   }
 
-  const existing = await prisma.subscription.findFirst({
+  const overlapping = await prisma.subscription.findFirst({
     where: {
-      ...where,
-      startDate: { lte: today },
-      endDate: { gte: today },
+      studentId,
+      type,
+      status: 'active',
+      startDate: { lte: newEnd },
+      endDate: { gte: newStart },
     },
   })
 
-  return Boolean(existing)
+  if (overlapping) {
+    return { conflict: true, existingId: overlapping.id, startDate: overlapping.startDate, endDate: overlapping.endDate }
+  }
+  return false
 }
 
 export async function canTransitionSubscription(currentStatus, nextStatus) {

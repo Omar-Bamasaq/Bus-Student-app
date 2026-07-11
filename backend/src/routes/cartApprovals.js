@@ -86,12 +86,6 @@ router.post('/:id/approve', authorize('admin'), async (req, res) => {
 
     for (const item of cart.items) {
       const type = item.type
-
-      const activeSame = await hasActiveSameTypeSubscription(cart.studentId, type)
-      if (activeSame) {
-        throw new Error(`الطالب لديه اشتراك نشط ${type}`)
-      }
-
       const itemData = (item.data || {})
       const homeDeliveryFee = item.homeDeliveryFee ? Number(item.homeDeliveryFee) : null
 
@@ -114,6 +108,11 @@ router.post('/:id/approve', authorize('admin'), async (req, res) => {
         }
         if (dates.length === 0) {
           throw new Error('لا توجد تواريخ للاشتراك اليومي')
+        }
+
+        const conflict = await hasActiveSameTypeSubscription(cart.studentId, 'DAILY', { dates })
+        if (conflict) {
+          throw new Error('لديك اشتراك يومي في أحد هذه الأيام، يرجى مراجعة التواريخ المختارة')
         }
 
         const sub = await prisma.subscription.create({
@@ -141,6 +140,11 @@ router.post('/:id/approve', authorize('admin'), async (req, res) => {
         const startDate = new Date(today)
         const endDate = new Date(today)
         endDate.setDate(endDate.getDate() + weeksCount * 7 - 1)
+
+        const conflict = await hasActiveSameTypeSubscription(cart.studentId, type, { startDate, endDate })
+        if (conflict) {
+          throw new Error('لديك اشتراك أسبوعي يتداخل مع فترة الاشتراك المطلوبة')
+        }
 
         const notesObj = { type: 'cart_item', cartId: cart.id }
         if (itemData.extraFeeType && itemData.extraFeeAmount) {

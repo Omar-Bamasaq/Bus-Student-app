@@ -284,9 +284,6 @@ router.post('/subscription-request-legacy', async (req, res) => {
     })
     if (existingRequest) return res.status(400).json({ error: 'لديك طلب اشتراك يومي قيد المراجعة' })
 
-    const activeSameType = await hasActiveSameTypeSubscription(studentId, 'DAILY')
-    if (activeSameType) return res.status(400).json({ error: 'لديك اشتراك يومي نشط بالفعل' })
-
     const pricing = zone.prices?.find(p => p.plan === 'DAILY')
     if (!pricing) return res.status(400).json({ error: 'لم يتم تحديد سعر للاشتراك اليومي' })
 
@@ -294,6 +291,11 @@ router.post('/subscription-request-legacy', async (req, res) => {
     const { dates, weekCount, startDate: firstDate, endDate: lastDate } = resolveDailyExecutionDates({ selectedDays, durationWeeks })
     if (dates.length === 0) {
       return res.status(400).json({ error: 'لا توجد تواريخ صالحة' })
+    }
+
+    const activeSameType = await hasActiveSameTypeSubscription(studentId, 'DAILY', { dates })
+    if (activeSameType) {
+      return res.status(400).json({ error: 'لديك اشتراك يومي في أحد هذه الأيام، يرجى مراجعة التواريخ المختارة' })
     }
     let amount = dailyPrice * weekCount
     let homeDeliveryFee = null
