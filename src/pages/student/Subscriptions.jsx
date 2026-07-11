@@ -637,7 +637,15 @@ export default function Subscriptions() {
           <h3 className="text-xs font-bold text-slate-700 mb-2">الاشتراكات الأسبوعية النشطة</h3>
           {activeWeeklySubscriptions.length > 0 ? (
             <div className="space-y-1.5">
-              {activeWeeklySubscriptions.map(sub => (
+              {activeWeeklySubscriptions.map(sub => {
+                const subNotes = (() => {
+                  try { return JSON.parse(sub.notes || '{}') } catch { return {} }
+                })()
+                const extraFeeType = subNotes.extraFeeType || null
+                const extraFeeAmount = Number(subNotes.extraFeeAmount || 0)
+                const amount = Number(sub.amount)
+                const hdf = sub.homeDeliveryFee ? Number(sub.homeDeliveryFee) : 0
+                return (
                 <div key={sub.id} className="rounded-lg border border-slate-200 p-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
@@ -651,8 +659,33 @@ export default function Subscriptions() {
                     </div>
                     <StatusBadge status={sub.status} />
                   </div>
+                  <div className="mt-1.5 pt-1.5 border-t border-slate-100 space-y-0.5 text-[10px] text-slate-600">
+                    <div className="flex justify-between">
+                      <span>المبلغ</span>
+                      <span className="font-medium text-slate-800">{amount.toLocaleString()} ريال</span>
+                    </div>
+                    {hdf > 0 && (
+                      <div className="flex justify-between">
+                        <span>رسوم التوصيل</span>
+                        <span className="font-medium">{hdf.toLocaleString()} ريال</span>
+                      </div>
+                    )}
+                    {extraFeeType && extraFeeAmount > 0 && (
+                      <div className="flex justify-between">
+                        <span>{extraFeeType === 'NEW_STUDENT' ? 'رسوم طالب جديد' : 'رسوم طالب متأخر'}</span>
+                        <span className="font-medium text-amber-600">+{extraFeeAmount.toLocaleString()} ريال</span>
+                      </div>
+                    )}
+                    {Number(sub.paidAmount) > 0 && (
+                      <div className="flex justify-between font-medium text-green-600">
+                        <span>المدفوع</span>
+                        <span>{Number(sub.paidAmount).toLocaleString()} ريال</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <p className="text-xs text-slate-400">لا توجد اشتراكات أسبوعية نشطة</p>
