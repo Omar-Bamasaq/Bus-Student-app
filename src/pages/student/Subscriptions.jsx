@@ -96,12 +96,23 @@ export default function Subscriptions() {
         )
         setCampaigns(subCamps)
         const priceMap = {}
-        await Promise.allSettled(subCamps.map(async (c) => {
-          try {
-            const p = await api.pricing.calculate(c.id)
-            priceMap[c.id] = p
-          } catch {}
-        }))
+        subCamps.forEach(c => {
+          if (c.basePrice !== undefined) {
+            priceMap[c.id] = {
+              basePrice: c.basePrice,
+              discount: c.discountAmount,
+              discountedPrice: c.discountedPrice,
+              surcharge: c.surcharge,
+              hasDiscount: c.hasDiscount,
+              extraFee: {
+                type: c.extraFeeType,
+                amount: c.extraFeeAmount,
+                label: c.extraFeeLabel,
+              },
+              finalAmount: c.finalAmount,
+            }
+          }
+        })
         setCampaignPrices(priceMap)
       }
       if (enrsResult.status === 'fulfilled') {
