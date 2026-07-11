@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     let { campaignId, studentId, areaId, baseAmount, surcharge, discount, finalAmount, receiptImage } = req.body
-    if (!campaignId || !studentId || baseAmount == null || finalAmount == null) {
+    if (!campaignId || !studentId || baseAmount == null) {
       return res.status(400).json({ error: 'البيانات غير كاملة' })
     }
     if (req.user.role === 'student') {
@@ -71,13 +71,18 @@ router.post('/', async (req, res) => {
       }
     }
 
+    const computedDiscount = Math.max(0, Number(discount || 0))
+    const computedSurcharge = Math.max(0, Number(surcharge || 0))
+    const computedExtraAmount = extraFee.amount || 0
+    const computedFinal = Number(baseAmount) - computedDiscount + computedSurcharge + computedExtraAmount
+
     const enrollment = await prisma.campaignEnrollment.create({
       data: {
         campaignId, studentId, areaId: areaId || null,
-        baseAmount, surcharge: surcharge || 0, discount: discount || 0,
+        baseAmount, surcharge: computedSurcharge, discount: computedDiscount,
         extraFeeType: extraFee.type,
         extraFeeAmount: extraFee.amount || null,
-        finalAmount,
+        finalAmount: finalAmount != null ? Math.max(Number(finalAmount), computedFinal) : computedFinal,
         receiptImage: receiptImage || null,
       },
       include: {
