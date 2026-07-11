@@ -4,7 +4,9 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
+import bcrypt from 'bcryptjs'
 import { initSocketServer } from './services/socketService.js'
+import { prisma } from './lib/prisma.js'
 import trackingRoutes from './routes/tracking.js'
 import authRoutes from './routes/auth.js'
 import studentRoutes from './routes/students.js'
@@ -42,6 +44,51 @@ import saturdayRoutes from './routes/saturdayOperations.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
+
+async function bootstrapInitialAdmin() {
+  try {
+    await prisma.$connect()
+
+    const existingAdmin = await prisma.user.findFirst({ where: { role: 'admin' } })
+    if (existingAdmin) {
+      return
+    }
+
+    const username = process.env.ADMIN_USERNAME?.trim()
+    const password = process.env.ADMIN_PASSWORD
+    const phone = process.env.ADMIN_PHONE?.trim() || null
+
+    if (!username || !password) {
+      console.warn('Skipping initial admin creation: ADMIN_USERNAME and ADMIN_PASSWORD must be set')
+      return
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { username } })
+    if (existingUser) {
+      return
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+    await prisma.user.create({
+      data: {
+        username,
+        name: username,
+        phone,
+        password: hashedPassword,
+        role: 'admin',
+        status: 'active',
+        mustChangePassword: false,
+      },
+    })
+
+    console.log('Initial admin created successfully')
+  } catch (error) {
+    if (error?.code === 'P2002') {
+      return
+    }
+    console.error('Initial admin bootstrap failed:', error.message)
+  }
+}
 
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
@@ -105,7 +152,6 @@ app.use('/api/approvals/carts', cartApprovalRoutes)
 app.use('/api/saturday', saturdayRoutes)
 
 // Auto-expire temporary transfers every 15 minutes
-import { prisma } from './lib/prisma.js'
 import { getLocalDate } from './utils/dateUtils.js'
 setInterval(async () => {
   try {
@@ -146,6 +192,8 @@ app.use((err, _req, res, _next) => {
     error: process.env.NODE_ENV === 'production' ? 'خطأ داخلي في الخادم' : err.message,
   })
 })
+
+await bootstrapInitialAdmin()
 
 const server = initSocketServer(app)
 server.listen(PORT, () => {})
