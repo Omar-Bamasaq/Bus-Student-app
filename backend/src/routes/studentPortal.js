@@ -404,7 +404,7 @@ router.post('/subscription-request-legacy', async (req, res) => {
       }
       await createSubscriptionNotification(
         req.user.id,
-        'subscription_request',
+        'student_subscription_requested',
         'تم إرسال طلب الاشتراك',
         'تم إرسال طلب الاشتراك اليومي بنجاح',
         { subscriptionId: sub.id }

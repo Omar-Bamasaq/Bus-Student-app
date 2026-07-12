@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Bell, X, CheckCheck, Trash2, AlertTriangle, Ban, CheckCircle, DollarSign, Bus, FileText, Users, ArrowLeft, ArrowRight, Clock, RefreshCw, Navigation, MapPin, Play, Filter, Loader2, UserPlus, UserMinus, ListOrdered, XCircle, Lock, CalendarCheck } from 'lucide-react'
+import { Bell, X, CheckCheck, Trash2, AlertTriangle, Ban, CheckCircle, DollarSign, Bus, FileText, Users, ArrowLeft, ArrowRight, Clock, RefreshCw, Navigation, MapPin, Play, Filter, Loader2, UserPlus, UserMinus, ListOrdered, XCircle, Lock, CalendarCheck, ShoppingCart } from 'lucide-react'
 import { api } from '../../lib/api'
 import { useNotifications } from '../../context/NotificationContext'
 import { onNotificationRead, offNotificationRead, onNotificationReadAll, offNotificationReadAll, onNotificationDeleted, offNotificationDeleted, onNotificationDeletedAll, offNotificationDeletedAll } from '../../lib/socket'
@@ -11,7 +11,7 @@ const PAGE_SIZE = 20
 const ICON_MAP = {
   AlertTriangle, Ban, CheckCircle, DollarSign, Bus, FileText, Users,
   ArrowLeft, ArrowRight, Clock, RefreshCw, Navigation, MapPin, Play, Bell,
-  UserPlus, UserMinus, ListOrdered, XCircle, Lock, CalendarCheck,
+  UserPlus, UserMinus, ListOrdered, XCircle, Lock, CalendarCheck, ShoppingCart,
 }
 
 const PRIORITY_CONFIG = {

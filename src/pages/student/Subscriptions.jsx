@@ -333,7 +333,7 @@ export default function Subscriptions() {
   }, [pricing])
 
   if (loading) {
-    return <div className="text-center py-12 text-slate-400 text-sm">جاري التحميل...</div>
+    return <div className="text-center py-16 text-slate-400 text-base font-medium">جاري التحميل...</div>
   }
 
   const tabItems = [
@@ -352,7 +352,7 @@ export default function Subscriptions() {
       active: 'bg-green-100 text-green-600',
     }
     return (
-      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${colors[status] || 'bg-slate-100 text-slate-600'}`}>
+      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${colors[status] || 'bg-slate-100 text-slate-600'}`}>
         {STATUS_LABELS[status] || status}
       </span>
     )
@@ -360,13 +360,16 @@ export default function Subscriptions() {
 
   function DailySubscriptionCard({ sub }) {
     return (
-      <div className="rounded-lg border border-slate-200 p-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <CalendarDays size={14} className="text-slate-400 shrink-0" />
+      <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-2 rounded-lg bg-[var(--color-primary)]/5">
+              <CalendarDays size={18} className="text-[var(--color-primary)]" />
+            </div>
             <div className="min-w-0">
-              <div className="text-xs font-medium text-slate-800">اشتراك يومي</div>
-              <div className="text-[10px] text-slate-500 truncate">
+              <div className="text-sm font-bold text-slate-800">اشتراك يومي</div>
+              <div className="text-xs text-slate-500 truncate mt-0.5">
+                <Clock size={12} className="inline ml-1" />
                 {new Date(sub.startDate).toLocaleDateString('ar-SA')} - {new Date(sub.endDate).toLocaleDateString('ar-SA')}
               </div>
             </div>
@@ -391,57 +394,80 @@ export default function Subscriptions() {
       : (price?.discountedPrice || 0)
 
     return (
-      <div className={`rounded-lg border p-2.5 ${isUpcoming ? 'border-amber-200 bg-amber-50/30' : hasActiveDiscount ? 'border-green-200 bg-green-50/30' : 'border-slate-200'}`}>
-        <div className="flex items-start justify-between mb-1.5">
-          <h4 className="text-xs font-bold text-slate-800">{campaign.title}</h4>
-          <div className="flex gap-1">
+      <div className={`rounded-xl border p-4 ${isUpcoming ? 'border-amber-300 bg-amber-50/40' : hasActiveDiscount ? 'border-green-300 bg-green-50/40' : 'border-slate-200 bg-white'}`}>
+        {/* Header: title + badges */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h4 className="text-sm font-bold text-slate-800 leading-snug">{campaign.title}</h4>
+          <div className="flex gap-1.5 shrink-0">
             {isUpcoming && (
-              <span className="bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap">
+              <span className="bg-amber-500 text-white text-[11px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap">
                 قادمة
               </span>
             )}
             {hasActiveDiscount && !existingEnrollment && !isUpcoming && (
-              <span className="bg-green-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap">
+              <span className="bg-green-500 text-white text-[11px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap">
                 خصم مبكر
               </span>
             )}
           </div>
         </div>
+
+        {/* Description */}
         {campaign.description && (
-          <p className="text-[10px] text-slate-500 mb-1.5">{campaign.description}</p>
+          <p className="text-xs text-slate-500 mb-2 leading-relaxed">{campaign.description}</p>
         )}
-        <div className="space-y-0.5 text-[10px] text-slate-600 mb-1.5">
-          <div className="flex justify-between">
-            <span>الفترة</span>
-            <span>{new Date(campaign.startDate).toLocaleDateString('ar-SA')} ↓ {new Date(campaign.endDate).toLocaleDateString('ar-SA')}</span>
+
+        {/* Details grid */}
+        <div className="space-y-1.5 text-xs text-slate-600 mb-2">
+          {/* Period with calendar icon */}
+          <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-2">
+            <CalendarDays size={16} className="text-slate-400 shrink-0" />
+            <span className="font-medium text-slate-700">
+              {new Date(campaign.startDate).toLocaleDateString('ar-SA')}
+            </span>
+            <span className="text-slate-300">—</span>
+            <span className="font-medium text-slate-700">
+              {new Date(campaign.endDate).toLocaleDateString('ar-SA')}
+            </span>
           </div>
-          <div className="flex justify-between">
-            <span>النوع:</span>
-            <span>{PLAN_LABELS[plan]}</span>
+
+          {/* Plan type */}
+          <div className="flex justify-between items-center px-2">
+            <span className="text-slate-500">نوع الاشتراك</span>
+            <span className="font-medium text-slate-700">{PLAN_LABELS[plan]}</span>
           </div>
+
+          {/* Divider */}
+          <div className="border-t border-slate-100 my-1" />
+
+          {/* Price section */}
           {hasActiveDiscount ? (
             <>
-              <div className="flex justify-between text-slate-400 pt-1 border-t border-slate-100 mt-1">
-                <span>السعر الأصلي</span>
-                <span className="line-through">{displayOriginal.toLocaleString()} ريال</span>
+              <div className="flex justify-between items-center px-2">
+                <span className="text-slate-500">السعر الأصلي</span>
+                <span className="text-sm line-through text-slate-400">{displayOriginal.toLocaleString()} ريال</span>
               </div>
-              <div className="flex justify-between font-bold text-slate-800">
-                <span>السعر بعد الخصم</span>
-                <span className="text-green-600">{displayPrice.toLocaleString()} ريال</span>
+              <div className="flex justify-between items-center px-2">
+                <span className="font-medium text-slate-700">السعر بعد الخصم</span>
+                <span className="text-sm font-bold text-green-600">{displayPrice.toLocaleString()} ريال</span>
               </div>
             </>
           ) : (
-            <div className="flex justify-between font-medium text-slate-800 pt-1 border-t border-slate-100 mt-1">
-              <span>السعر</span>
-              <span className="text-[var(--color-primary)]">{displayOriginal.toLocaleString()} ريال</span>
+            <div className="flex justify-between items-center px-2">
+              <span className="font-medium text-slate-700">سعر الاشتراك</span>
+              <span className="text-sm font-bold text-[var(--color-primary)]">{displayOriginal.toLocaleString()} ريال</span>
             </div>
           )}
+
+          {/* Surcharge */}
           {(existingEnrollment ? Number(existingEnrollment.surcharge || 0) : Number(price?.surcharge || 0)) > 0 && (
-            <div className="flex justify-between text-slate-600 mt-0.5">
-              <span>رسوم التوصيل المنزلي:</span>
-              <span className="font-medium">{(existingEnrollment ? Number(existingEnrollment.surcharge) : Number(price?.surcharge)).toLocaleString()} ريال</span>
+            <div className="flex justify-between items-center px-2">
+              <span className="text-slate-500">رسوم التوصيل المنزلي</span>
+              <span className="text-xs font-medium text-slate-700">+{(existingEnrollment ? Number(existingEnrollment.surcharge) : Number(price?.surcharge)).toLocaleString()} ريال</span>
             </div>
           )}
+
+          {/* Extra fee */}
           {(() => {
             const efType = existingEnrollment ? existingEnrollment.extraFeeType : (price?.extraFee?.type || null)
             const efAmount = existingEnrollment ? Number(existingEnrollment.extraFeeAmount || 0) : (price?.extraFee?.amount || 0)
@@ -450,61 +476,66 @@ export default function Subscriptions() {
               : price?.extraFee?.label || null
             if (efType && efAmount > 0) {
               return (
-                <div className="flex justify-between text-slate-600 mt-0.5">
-                  <span>{efLabel}:</span>
-                  <span className="font-medium text-amber-600">+{efAmount.toLocaleString()} ريال</span>
+                <div className="flex justify-between items-center px-2">
+                  <span className="text-slate-500">{efLabel}</span>
+                  <span className="text-xs font-medium text-amber-600">+{efAmount.toLocaleString()} ريال</span>
                 </div>
               )
             }
             return null
           })()}
-          <div className="flex justify-between font-bold text-slate-800 pt-1 border-t border-slate-100 mt-0.5">
-            <span>الإجمالي</span>
-            <span className="text-[var(--color-primary)]">{Number(existingEnrollment ? existingEnrollment.finalAmount : (price?.finalAmount || 0)).toLocaleString()} ريال</span>
+
+          {/* Total */}
+          <div className="flex justify-between items-center bg-[var(--color-primary)]/5 rounded-lg px-3 py-2.5 mt-1">
+            <span className="text-sm font-bold text-slate-800">الإجمالي</span>
+            <span className="text-base font-extrabold text-[var(--color-primary)]">
+              {Number(existingEnrollment ? existingEnrollment.finalAmount : (price?.finalAmount || 0)).toLocaleString()} <span className="text-xs font-medium">ريال</span>
+            </span>
           </div>
         </div>
 
+        {/* Actions */}
         {existingEnrollment && !isEnrolling ? (
           existingEnrollment.receiptStatus === 'REJECTED' ? (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">
-              <div className="font-medium">تم رفض الطلب</div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 space-y-2">
+              <div className="font-bold">تم رفض الطلب</div>
               {existingEnrollment.rejectionReason && (
-                <div className="mt-1"><span className="font-medium">السبب:</span> {existingEnrollment.rejectionReason}</div>
+                <div><span className="font-medium">السبب:</span> {existingEnrollment.rejectionReason}</div>
               )}
               <button onClick={() => { setCampaignEnrolling(campaign.id); setCampaignError(''); setCampaignSuccess('') }}
-                className="mt-1.5 w-full rounded-lg bg-[var(--color-primary)] py-1.5 text-xs font-medium text-white">
+                className="w-full rounded-lg bg-[var(--color-primary)] py-2.5 text-sm font-bold text-white">
                 إعادة تقديم الطلب
               </button>
             </div>
           ) : (
-            <div className="rounded-lg bg-slate-50 p-2 text-xs">
+            <div className="rounded-lg bg-slate-50 p-3 text-sm text-center">
               <span className="font-medium text-slate-700">
-                {existingEnrollment.receiptStatus === 'PENDING' ? 'طلب قيد الانتظار' :
-                 existingEnrollment.receiptStatus === 'APPROVED' ? 'تمت الموافقة' : ''}
+                {existingEnrollment.receiptStatus === 'PENDING' ? '✅ طلب قيد الانتظار' :
+                 existingEnrollment.receiptStatus === 'APPROVED' ? '✅ تمت الموافقة على طلبك' : ''}
               </span>
             </div>
           )
         ) : isEnrolling ? (
           <div className="space-y-2">
-            {campaignError && <p className="text-red-500 text-xs">{campaignError}</p>}
-            {campaignSuccess && <p className="text-green-600 text-xs bg-green-50 p-2 rounded-lg">{campaignSuccess}</p>}
-            <div className="flex gap-1.5">
+            {campaignError && <p className="text-sm text-red-500 bg-red-50 p-2 rounded-lg">{campaignError}</p>}
+            {campaignSuccess && <p className="text-sm text-green-600 bg-green-50 p-3 rounded-lg font-medium">{campaignSuccess}</p>}
+            <div className="flex gap-2">
               <button onClick={() => handleAddCampaignToCart(campaign)} disabled={campaignSubmitting}
-                className="flex-1 bg-[var(--color-primary)] text-white py-2 rounded-lg text-xs font-medium disabled:opacity-50">
+                className="flex-1 bg-[var(--color-primary)] text-white py-2.5 rounded-xl text-sm font-bold disabled:opacity-50">
                 {campaignSubmitting ? 'جاري...' : 'إضافة إلى السلة'}
               </button>
               <button onClick={() => { setCampaignEnrolling(null); setCampaignError(''); setCampaignSuccess('') }}
-                className="px-3 py-2 rounded-lg text-xs font-medium border border-slate-200 text-slate-600">
+                className="px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-200 text-slate-600">
                 إلغاء
               </button>
             </div>
           </div>
         ) : (
           <div className="space-y-2">
-            {campaignError && <p className="text-red-500 text-xs">{campaignError}</p>}
-            {campaignSuccess && <p className="text-green-600 text-xs bg-green-50 p-2 rounded-lg">{campaignSuccess}</p>}
+            {campaignError && <p className="text-sm text-red-500 bg-red-50 p-2 rounded-lg">{campaignError}</p>}
+            {campaignSuccess && <p className="text-sm text-green-600 bg-green-50 p-3 rounded-lg font-medium">{campaignSuccess}</p>}
             <button onClick={() => handleAddCampaignToCart(campaign)} disabled={campaignSubmitting}
-              className="w-full bg-[var(--color-primary)] text-white py-2 rounded-lg text-xs font-medium disabled:opacity-50">
+              className="w-full bg-[var(--color-primary)] text-white py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 min-h-[44px]">
               {campaignSubmitting ? 'جاري...' : 'إضافة إلى السلة'}
             </button>
           </div>
@@ -515,34 +546,34 @@ export default function Subscriptions() {
 
   function renderDailyTab() {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {/* Active daily subscriptions */}
-        <div className="bg-white rounded-xl p-3">
-          <h3 className="text-xs font-bold text-slate-700 mb-2">الاشتراكات اليومية النشطة</h3>
+        <div className="bg-white rounded-xl p-4">
+          <h3 className="text-sm font-bold text-slate-800 mb-3">الاشتراكات اليومية النشطة</h3>
           {activeDailySubscriptions.length > 0 ? (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {activeDailySubscriptions.map(sub => (
                 <DailySubscriptionCard key={sub.id} sub={sub} />
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-400">لا توجد اشتراكات يومية نشطة</p>
+            <p className="text-sm text-slate-400 text-center py-4">لا توجد اشتراكات يومية نشطة</p>
           )}
         </div>
 
         {/* New daily request */}
-        <div className="bg-white rounded-xl p-3">
-          <h3 className="text-xs font-bold text-slate-700 mb-3">طلب اشتراك يومي جديد</h3>
-          <div className="space-y-2.5">
+        <div className="bg-white rounded-xl p-4">
+          <h3 className="text-sm font-bold text-slate-800 mb-4">طلب اشتراك يومي جديد</h3>
+          <div className="space-y-3">
             {/* Duration */}
             <div>
-              <label className="block text-xs text-slate-500 mb-1.5">المدة</label>
-              <div className="grid grid-cols-4 gap-1.5">
+              <label className="block text-sm font-medium text-slate-600 mb-2">المدة</label>
+              <div className="grid grid-cols-4 gap-2">
                 {[1, 2, 3, 4].map(w => (
                   <button key={w} onClick={() => setDailyWeeks(w)}
-                    className={`py-2 rounded-lg text-xs font-medium transition-all ${
+                    className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
                       dailyWeeks === w
-                        ? 'bg-[var(--color-primary)] text-white'
+                        ? 'bg-[var(--color-primary)] text-white shadow-sm'
                         : 'bg-slate-50 text-slate-600 border border-slate-200'
                     }`}>
                     {w === 1 ? 'أسبوع' : `${w} أسابيع`}
@@ -553,13 +584,13 @@ export default function Subscriptions() {
 
             {/* Days selection */}
             <div>
-              <label className="block text-xs text-slate-500 mb-1.5">الأيام</label>
-              <div className="grid grid-cols-3 gap-1.5">
+              <label className="block text-sm font-medium text-slate-600 mb-2">الأيام</label>
+              <div className="grid grid-cols-3 gap-2">
                 {WEEKDAYS.map(day => (
                   <button key={day.value} onClick={() => toggleDay(day.value)}
-                    className={`py-2 rounded-lg text-xs font-medium transition-all ${
+                    className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
                       dailyDays.includes(day.value)
-                        ? 'bg-[var(--color-primary)] text-white'
+                        ? 'bg-[var(--color-primary)] text-white shadow-sm'
                         : 'bg-slate-50 text-slate-600 border border-slate-200'
                     }`}>
                     {day.label}
@@ -569,44 +600,44 @@ export default function Subscriptions() {
             </div>
 
             {computedDates.length > 0 && (
-              <div className="bg-slate-50 rounded-lg p-2.5 space-y-1.5">
-                <div className="text-xs font-bold text-slate-700">ملخص الطلب</div>
-                <div className="space-y-0.5 text-xs">
+              <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                <div className="text-sm font-bold text-slate-700">ملخص الطلب</div>
+                <div className="space-y-1.5 text-sm">
                   <div className="flex justify-between text-slate-600">
                     <span>المدة:</span>
-                    <span className="font-medium">{dailyWeeks === 1 ? 'أسبوع واحد' : `${dailyWeeks} أسابيع`}</span>
+                    <span className="font-semibold">{dailyWeeks === 1 ? 'أسبوع واحد' : `${dailyWeeks} أسابيع`}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>الأيام:</span>
-                    <span className="font-medium truncate max-w-[60%]">{dailyDays.map(d => DAY_NAMES_AR[d]).join('، ')}</span>
+                    <span className="font-semibold truncate max-w-[65%]">{dailyDays.map(d => DAY_NAMES_AR[d]).join('، ')}</span>
                   </div>
                 </div>
-                <div className="pt-1.5 border-t border-slate-200">
-                  <div className="text-[10px] text-slate-500 mb-1">التواريخ ({computedDates.length}):</div>
-                  <div className="flex flex-wrap gap-1">
+                <div className="pt-2 border-t border-slate-200">
+                  <div className="text-xs text-slate-500 mb-1.5">التواريخ ({computedDates.length}):</div>
+                  <div className="flex flex-wrap gap-1.5">
                     {computedDates.map((d, i) => (
-                      <span key={i} className="text-[10px] bg-white px-1.5 py-0.5 rounded text-slate-600 border border-slate-100">
+                      <span key={i} className="text-xs bg-white px-2 py-1 rounded-lg text-slate-600 border border-slate-100 font-medium">
                         {DAY_NAMES_AR[['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'][d.getDay()]]}
                         {' '}{d.toLocaleDateString('en-GB')}
                       </span>
                     ))}
                   </div>
                 </div>
-                <div className="flex justify-between font-bold text-slate-800 pt-1.5 border-t border-slate-200">
-                  <span className="text-xs">الإجمالي:</span>
-                  <span className="text-xs text-[var(--color-primary)]">{dailyTotal.toLocaleString()} ريال</span>
+                <div className="flex justify-between font-bold text-slate-800 pt-2 border-t border-slate-200">
+                  <span className="text-sm">الإجمالي:</span>
+                  <span className="text-base text-[var(--color-primary)]">{dailyTotal.toLocaleString()} ريال</span>
                 </div>
                 {dailyHomeFee > 0 && (
-                  <div className="text-[10px] text-slate-400">* شامل رسوم التوصيل المنزلي {dailyHomeFee.toLocaleString()} ريال لكل يوم</div>
+                  <div className="text-xs text-slate-400">* شامل رسوم التوصيل المنزلي {dailyHomeFee.toLocaleString()} ريال لكل يوم</div>
                 )}
               </div>
             )}
 
-            {dailyError && <p className="text-red-500 text-xs">{dailyError}</p>}
-            {dailySuccess && <p className="text-green-600 text-xs bg-green-50 p-2 rounded-lg">{dailySuccess}</p>}
+            {dailyError && <p className="text-sm text-red-500 bg-red-50 p-2 rounded-lg">{dailyError}</p>}
+            {dailySuccess && <p className="text-sm text-green-600 bg-green-50 p-3 rounded-lg font-medium">{dailySuccess}</p>}
 
             <button onClick={handleAddDailyToCart} disabled={dailyAddingToCart || computedDates.length === 0}
-              className="w-full bg-[var(--color-primary)] text-white py-2.5 rounded-lg text-xs font-medium disabled:opacity-50 min-h-[44px]">
+              className="w-full bg-[var(--color-primary)] text-white py-3 rounded-xl text-sm font-bold disabled:opacity-50 min-h-[48px]">
               {dailyAddingToCart ? 'جاري الإضافة...' : 'إضافة إلى السلة'}
             </button>
           </div>
@@ -619,18 +650,21 @@ export default function Subscriptions() {
     return (
       <div className="space-y-2">
         {/* Active weekly subs compact */}
-        <div className="bg-white rounded-xl p-3">
-          <h3 className="text-xs font-bold text-slate-700 mb-2">الاشتراكات الأسبوعية النشطة</h3>
+        <div className="bg-white rounded-xl p-4">
+          <h3 className="text-sm font-bold text-slate-800 mb-3">الاشتراكات الأسبوعية النشطة</h3>
           {activeWeeklySubscriptions.length > 0 ? (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {activeWeeklySubscriptions.map(sub => (
-                <div key={sub.id} className="rounded-lg border border-slate-200 p-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <CreditCard size={14} className="text-slate-400 shrink-0" />
+                <div key={sub.id} className="rounded-xl border border-slate-200 bg-white p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="p-2 rounded-lg bg-[var(--color-primary)]/5">
+                        <CreditCard size={18} className="text-[var(--color-primary)]" />
+                      </div>
                       <div className="min-w-0">
-                        <div className="text-xs font-medium text-slate-800">{PLAN_LABELS[sub.type] || sub.type}</div>
-                        <div className="text-[10px] text-slate-500 truncate">
+                        <div className="text-sm font-bold text-slate-800">{PLAN_LABELS[sub.type] || sub.type}</div>
+                        <div className="text-xs text-slate-500 truncate mt-0.5">
+                          <Clock size={12} className="inline ml-1" />
                           {new Date(sub.startDate).toLocaleDateString('ar-SA')} - {new Date(sub.endDate).toLocaleDateString('ar-SA')}
                         </div>
                       </div>
@@ -641,15 +675,15 @@ export default function Subscriptions() {
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-400">لا توجد اشتراكات أسبوعية نشطة</p>
+            <p className="text-sm text-slate-400 text-center py-4">لا توجد اشتراكات أسبوعية نشطة</p>
           )}
         </div>
 
         {/* Campaigns - Active */}
         {activeCampaigns.length > 0 && (
-          <div className="bg-white rounded-xl p-3">
-            <h3 className="text-xs font-bold text-slate-700 mb-2">الحملات النشطة</h3>
-            <div className="space-y-2">
+          <div className="bg-white rounded-xl p-4">
+            <h3 className="text-sm font-bold text-slate-800 mb-3">الحملات النشطة</h3>
+            <div className="space-y-3">
               {activeCampaigns.map(campaign => <CampaignCard key={campaign.id} campaign={campaign} />)}
             </div>
           </div>
@@ -657,17 +691,17 @@ export default function Subscriptions() {
 
         {/* Campaigns - Upcoming */}
         {upcomingCampaigns.length > 0 && (
-          <div className="bg-white rounded-xl p-3 border border-amber-200">
-            <h3 className="text-xs font-bold text-amber-700 mb-2">الحملات القادمة</h3>
-            <div className="space-y-2">
+          <div className="bg-white rounded-xl p-4 border border-amber-300">
+            <h3 className="text-sm font-bold text-amber-700 mb-3">الحملات القادمة</h3>
+            <div className="space-y-3">
               {upcomingCampaigns.map(campaign => <CampaignCard key={campaign.id} campaign={campaign} isUpcoming />)}
             </div>
           </div>
         )}
 
         {campaigns.length === 0 && (
-          <div className="bg-white rounded-xl p-3">
-            <p className="text-xs text-slate-400 text-center py-4">لا توجد حالياً حملات اشتراك مفتوحة</p>
+          <div className="bg-white rounded-xl p-8 text-center">
+            <p className="text-sm text-slate-400">لا توجد حالياً حملات اشتراك مفتوحة</p>
           </div>
         )}
       </div>
@@ -676,18 +710,18 @@ export default function Subscriptions() {
 
   function renderCurrentTab() {
     return (
-      <div className="bg-white rounded-xl p-3">
-        <h3 className="text-xs font-bold text-slate-700 mb-2">
+      <div className="bg-white rounded-xl p-4">
+        <h3 className="text-sm font-bold text-slate-800 mb-3">
           {destId ? 'أسعار الاشتراكات حسب وجهتي' : 'أسعار الاشتراكات حسب المنطقة'}
         </h3>
-        <div className="overflow-x-auto -mx-3">
-          <table className="w-full text-xs">
+        <div className="overflow-x-auto -mx-4">
+          <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-slate-600">
-                <th className="px-3 py-2 text-right font-semibold">المنطقة</th>
-                <th className="px-3 py-2 text-right font-semibold">4 أسابيع</th>
-                <th className="px-3 py-2 text-right font-semibold">3 أسابيع</th>
-                <th className="px-3 py-2 text-right font-semibold">يومي</th>
+                <th className="px-4 py-2.5 text-right font-bold">المنطقة</th>
+                <th className="px-4 py-2.5 text-right font-bold">4 أسابيع</th>
+                <th className="px-4 py-2.5 text-right font-bold">3 أسابيع</th>
+                <th className="px-4 py-2.5 text-right font-bold">يومي</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -703,62 +737,64 @@ export default function Subscriptions() {
                 const isDestPrice = Boolean(zone.prices?.some(p => String(p.destinationId) === String(destId)))
                 return (
                   <tr key={zone.id} className={isMyZone ? 'bg-blue-50' : ''}>
-                    <td className={`px-3 py-2 text-xs font-medium ${isMyZone ? 'text-[var(--color-primary)]' : 'text-slate-700'}`}>
+                    <td className={`px-4 py-3 text-sm font-bold ${isMyZone ? 'text-[var(--color-primary)]' : 'text-slate-700'}`}>
                       {zone.name || 'غير محددة'}
-                      {isMyZone && <span className="mr-1 text-[9px] text-slate-400">(منطقتي)</span>}
+                      {isMyZone && <span className="mr-1.5 text-[10px] text-slate-400 font-medium">(منطقتي)</span>}
                     </td>
-                    <td className={`px-3 py-2 text-xs ${isDestPrice ? 'text-green-600 font-semibold' : isMyZone ? 'text-[var(--color-primary)] font-semibold' : 'text-slate-700'}`}>
+                    <td className={`px-4 py-3 text-sm ${isDestPrice ? 'text-green-600 font-extrabold' : isMyZone ? 'text-[var(--color-primary)] font-bold' : 'text-slate-700'}`}>
                       {(fourWeeksPrice != null) ? fourWeeksPrice.toLocaleString() : '-'}
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{(threeWeeksPrice != null) ? threeWeeksPrice.toLocaleString() : '-'}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600">{(dailyPrice != null) ? dailyPrice.toLocaleString() : '-'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{(threeWeeksPrice != null) ? threeWeeksPrice.toLocaleString() : '-'}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{(dailyPrice != null) ? dailyPrice.toLocaleString() : '-'}</td>
                   </tr>
                 )
               }) : (
                 <tr>
-                  <td colSpan={4} className="px-3 py-4 text-center text-xs text-slate-400">لا توجد بيانات أسعار متاحة</td>
+                  <td colSpan={4} className="px-4 py-6 text-center text-sm text-slate-400">لا توجد بيانات أسعار متاحة</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        <div className="mt-1 text-[10px] text-slate-400">* الأسعار بالريال اليمني</div>
+        <div className="mt-2 text-xs text-slate-400">* الأسعار بالريال اليمني</div>
       </div>
     )
   }
 
   function renderHistoryTab() {
     return (
-      <div className="bg-white rounded-xl p-3">
-        <h3 className="text-xs font-bold text-slate-700 mb-2">سجل الاشتراكات</h3>
+      <div className="bg-white rounded-xl p-4">
+        <h3 className="text-sm font-bold text-slate-800 mb-3">سجل الاشتراكات</h3>
         {nonActiveSubscriptions.length > 0 ? (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {nonActiveSubscriptions.map(sub => (
-              <div key={sub.id} className="rounded-lg border border-slate-200 p-2.5">
+              <div key={sub.id} className="rounded-xl border border-slate-200 p-3">
                 <div className="flex justify-between items-start gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <FileText size={14} className="text-slate-400 shrink-0" />
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="p-1.5 rounded-lg bg-slate-50">
+                      <FileText size={16} className="text-slate-500 shrink-0" />
+                    </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-medium text-slate-800">{PLAN_LABELS[sub.type] || sub.type}</div>
-                      <div className="text-[10px] text-slate-500 truncate">
+                      <div className="text-sm font-bold text-slate-800">{PLAN_LABELS[sub.type] || sub.type}</div>
+                      <div className="text-xs text-slate-500 truncate">
                         {new Date(sub.startDate).toLocaleDateString('ar-SA')} - {new Date(sub.endDate).toLocaleDateString('ar-SA')}
                       </div>
                     </div>
                   </div>
                   <StatusBadge status={sub.status} />
                 </div>
-                <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-slate-600">
-                  <span>المبلغ: <b>{Number(sub.amount).toLocaleString()} ريال</b></span>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                  <span>المبلغ: <span className="font-bold text-slate-800">{Number(sub.amount).toLocaleString()} ريال</span></span>
                   {sub.homeDeliveryFee != null && Number(sub.homeDeliveryFee) > 0 && (
-                    <span>التوصيل: {Number(sub.homeDeliveryFee).toLocaleString()} ريال</span>
+                    <span>التوصيل: <span className="font-bold text-slate-800">{Number(sub.homeDeliveryFee).toLocaleString()} ريال</span></span>
                   )}
-                  <span>المدفوع: {Number(sub.paidAmount).toLocaleString()} ريال</span>
+                  <span>المدفوع: <span className="font-bold text-green-600">{Number(sub.paidAmount).toLocaleString()} ريال</span></span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-xs text-slate-400 text-center py-4">لا توجد اشتراكات محفوظة في السجل</p>
+          <p className="text-sm text-slate-400 text-center py-8">لا توجد اشتراكات محفوظة في السجل</p>
         )}
       </div>
     )
@@ -797,49 +833,51 @@ export default function Subscriptions() {
   return (
     <div className="space-y-2">
       {cart && (
-        <div className="bg-white rounded-xl border border-[var(--color-primary)]/20 p-3 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <ShoppingCart size={16} className="text-[var(--color-primary)]" />
-            <h3 className="text-xs font-bold text-[var(--color-primary)]">سلة الاشتراكات</h3>
-            <span className="text-[10px] text-slate-400">({(cart.items || []).length} {(cart.items || []).length === 1 ? 'عنصر' : 'عناصر'})</span>
+        <div className="bg-white rounded-xl border-2 border-[var(--color-primary)]/30 p-4 shadow-md">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-1.5 rounded-lg bg-[var(--color-primary)]/5">
+              <ShoppingCart size={20} className="text-[var(--color-primary)]" />
+            </div>
+            <h3 className="text-sm font-bold text-[var(--color-primary)]">سلة الاشتراكات</h3>
+            <span className="text-xs text-slate-400">({(cart.items || []).length} {(cart.items || []).length === 1 ? 'عنصر' : 'عناصر'})</span>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {(cart.items || []).map((item, idx) => (
-              <div key={item.id} className="flex items-center justify-between gap-2 py-1.5 px-2 bg-slate-50 rounded-lg">
+              <div key={item.id} className="flex items-center justify-between gap-3 py-2.5 px-3 bg-slate-50 rounded-xl">
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium text-slate-800">
+                  <div className="text-sm font-semibold text-slate-800">
                     {item.type === 'DAILY' ? 'اشتراك يومي' : item.type === 'FOUR_WEEKS' ? 'اشتراك 4 أسابيع' : item.type === 'THREE_WEEKS' ? 'اشتراك 3 أسابيع' : item.type}
-                    {item.data?.campaignTitle && <span className="text-slate-500"> - {item.data.campaignTitle}</span>}
+                    {item.data?.campaignTitle && <span className="text-slate-500 font-medium"> - {item.data.campaignTitle}</span>}
                   </div>
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-xs text-slate-500 mt-0.5">
                     {item.data?.selectedDays?.length > 0 && (
                       <span>{item.data.selectedDays.map(d => DAY_NAMES_AR[d]).join('، ')} · </span>
                     )}
                     {item.data?.weeksCount && <span>{item.data.weeksCount} {item.data.weeksCount === 1 ? 'أسبوع' : 'أسابيع'} · </span>}
-                    {Number(item.amount).toLocaleString()} ريال
+                    <span className="font-medium text-slate-700">{Number(item.amount).toLocaleString()} ريال</span>
                   </div>
                 </div>
-                <button onClick={() => handleRemoveItem(item.id)} className="p-1 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
-                  <Trash2 size={14} />
+                <button onClick={() => handleRemoveItem(item.id)} className="p-2 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+                  <Trash2 size={16} />
                 </button>
               </div>
             ))}
           </div>
 
-          <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-200">
-            <span className="text-xs font-bold text-slate-800">الإجمالي</span>
-            <span className="text-sm font-bold text-[var(--color-primary)]">{Number(cart.totalAmount).toLocaleString()} ريال</span>
+          <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-200">
+            <span className="text-sm font-bold text-slate-800">الإجمالي</span>
+            <span className="text-base font-extrabold text-[var(--color-primary)]">{Number(cart.totalAmount).toLocaleString()} <span className="text-xs font-medium">ريال</span></span>
           </div>
 
           {cartSuccess ? (
-            <p className="mt-2 text-green-600 text-xs bg-green-50 p-2 rounded-lg">{cartSuccess}</p>
+            <p className="mt-3 text-sm text-green-600 bg-green-50 p-3 rounded-xl font-medium">{cartSuccess}</p>
           ) : (
-            <div className="mt-2 space-y-2">
+            <div className="mt-3 space-y-3">
               <div>
-                <label className="flex items-center justify-center gap-1.5 border-2 border-dashed border-slate-200 rounded-lg py-2 cursor-pointer hover:border-[var(--color-primary)] transition-colors">
-                  <Upload size={14} className="text-slate-400" />
-                  <span className="text-xs text-slate-500">{cartReceipt ? 'تغيير السند' : 'صورة سند التحويل'}</span>
+                <label className="flex items-center justify-center gap-2 border-2 border-dashed border-slate-200 rounded-xl py-3 cursor-pointer hover:border-[var(--color-primary)] transition-colors">
+                  <Upload size={18} className="text-slate-400" />
+                  <span className="text-sm text-slate-500 font-medium">{cartReceipt ? 'تغيير صورة السند' : 'إرفاق صورة سند التحويل'}</span>
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (!file) return
@@ -848,11 +886,11 @@ export default function Subscriptions() {
                     reader.readAsDataURL(file)
                   }} />
                 </label>
-                {cartReceipt && <img src={cartReceipt} alt="السند" className="mt-1 max-h-16 rounded-lg border border-slate-200" />}
+                {cartReceipt && <img src={cartReceipt} alt="السند" className="mt-2 max-h-24 rounded-xl border border-slate-200" />}
               </div>
-              {cartError && <p className="text-red-500 text-xs">{cartError}</p>}
+              {cartError && <p className="text-sm text-red-500 bg-red-50 p-2 rounded-lg">{cartError}</p>}
               <button onClick={handleCartSubmit} disabled={cartSubmitting || !cartReceipt}
-                className="w-full bg-[var(--color-primary)] text-white py-2.5 rounded-lg text-xs font-medium disabled:opacity-50 min-h-[44px]">
+                className="w-full bg-[var(--color-primary)] text-white py-3 rounded-xl text-sm font-bold disabled:opacity-50 min-h-[48px]">
                 {cartSubmitting ? 'جاري الإرسال...' : 'إرسال الطلب'}
               </button>
             </div>
@@ -860,13 +898,13 @@ export default function Subscriptions() {
         </div>
       )}
 
-      <div className="grid grid-cols-4 gap-1 bg-white rounded-xl border border-slate-200 p-1 shadow-sm">
+      <div className="grid grid-cols-4 gap-1.5 bg-white rounded-xl border border-slate-200 p-1.5 shadow-sm">
         {tabItems.map((tab) => (
           <NavLink key={tab.key} to={tab.key} end
             className={({ isActive }) =>
-              `rounded-lg py-2 text-[11px] font-semibold text-center transition-all ${
+              `rounded-xl py-2.5 text-sm font-bold text-center transition-all ${
                 isActive
-                  ? 'bg-[var(--color-primary)] text-white'
+                  ? 'bg-[var(--color-primary)] text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-50'
               }`
             }>

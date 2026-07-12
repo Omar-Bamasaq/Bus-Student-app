@@ -13,7 +13,7 @@ export const NOTIFICATION_CONFIG = {
   return_trip_completed: { priority: PRIORITY.INFO, icon: 'CheckCircle', route: '/admin/operations/return' },
 
   // Subscriptions
-  subscription_request: { priority: PRIORITY.WARNING, icon: 'FileText', route: '/admin/finance/approvals' },
+  subscription_request: { priority: PRIORITY.WARNING, icon: 'FileText', route: '/admin/subscriptions?tab=approvals' },
   subscription_approved: { priority: PRIORITY.INFO, icon: 'CheckCircle', route: '/student/subscriptions' },
   subscription_rejected: { priority: PRIORITY.WARNING, icon: 'Ban', route: '/student/subscriptions' },
 
@@ -42,8 +42,22 @@ export const NOTIFICATION_CONFIG = {
   bus_full: { priority: PRIORITY.WARNING, icon: 'Bus', route: '/admin/operations/return' },
   student_unassigned: { priority: PRIORITY.CRITICAL, icon: 'AlertTriangle', route: '/admin/operations/return' },
 
+  // Cart
+  cart_submitted: { priority: PRIORITY.WARNING, icon: 'ShoppingCart', route: '/admin/subscriptions?tab=approvals' },
+  cart_rejected: { priority: PRIORITY.WARNING, icon: 'Ban', route: '/student/subscriptions' },
+
+  // Emergency Transfer
+  emergency_transfer: { priority: PRIORITY.CRITICAL, icon: 'ArrowRight', route: '/admin/emergency' },
+
   // Sheets
   weekly_sheets_created: { priority: PRIORITY.INFO, icon: 'FileText', route: '/admin/reports/weekly-sheets' },
+
+  // Saturday
+  saturday_duty: { priority: PRIORITY.INFO, icon: 'CalendarCheck', route: '/driver' },
+  saturday_student_added: { priority: PRIORITY.INFO, icon: 'UserPlus', route: '/driver' },
+
+  // Generic info (fallback for ad-hoc notifications)
+  info: { priority: PRIORITY.INFO, icon: 'Bell', route: null },
 
   // Tracking
   tracking_next: { priority: PRIORITY.INFO, icon: 'Navigation', route: null },

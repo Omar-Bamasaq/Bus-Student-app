@@ -103,7 +103,7 @@ router.post('/', async (req, res) => {
       if (studentUser?.id) {
         await createSubscriptionNotification(
           studentUser.id,
-          'subscription_request',
+          'student_subscription_requested',
           'تم إرسال طلب الاشتراك',
           `تم إرسال طلب اشتراكك في حملة "${enrollment.campaign.title}" بنجاح`,
           { enrollmentId: enrollment.id }

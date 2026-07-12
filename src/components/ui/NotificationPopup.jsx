@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Bell, CheckCircle, DollarSign, Bus, FileText, Users, ArrowLeft, ArrowRight, Clock, Ban, RefreshCw, Navigation, MapPin, Play, X, UserPlus, UserMinus, ListOrdered, XCircle, Lock, CalendarCheck, Home } from 'lucide-react'
+import { AlertTriangle, Bell, CheckCircle, DollarSign, Bus, FileText, Users, ArrowLeft, ArrowRight, Clock, Ban, RefreshCw, Navigation, MapPin, Play, X, UserPlus, UserMinus, ListOrdered, XCircle, Lock, CalendarCheck, Home, ShoppingCart } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications } from '../../context/NotificationContext'
 
 const ICON_MAP = {
   AlertTriangle, Bell, CheckCircle, DollarSign, Bus, FileText,
   Users, ArrowLeft, ArrowRight, Clock, Ban, RefreshCw, Navigation, MapPin, Play,
-  UserPlus, UserMinus, ListOrdered, XCircle, Lock, CalendarCheck, Home,
+  UserPlus, UserMinus, ListOrdered, XCircle, Lock, CalendarCheck, Home, ShoppingCart,
 }
 
 const PRIORITY_STYLES = {
@@ -37,11 +37,11 @@ export default function NotificationPopup({ notification }) {
   }, [])
 
   function handleClick() {
+    if (notification.targetRoute) {
+      navigate(notification.targetRoute)
+    }
     setExiting(true)
-    setTimeout(() => {
-      dismissPopup(notification._popupId)
-      if (notification.targetRoute) navigate(notification.targetRoute)
-    }, 200)
+    setTimeout(() => dismissPopup(notification._popupId), 300)
   }
 
   function handleDismiss() {
