@@ -95,6 +95,18 @@ export default function Subscriptions() {
           c => c.type === 'subscription_3weeks' || c.type === 'subscription_4weeks'
         )
         setCampaigns(subCamps)
+
+        // Debug: campaign vs subscription dates
+        if (subsResult.status === 'fulfilled') {
+          const subs = subsResult.value
+          console.log('--- DATE DEBUG ---')
+          subCamps.forEach(c => {
+            console.log('campaign.id:', c.id, 'startDate:', c.startDate, 'endDate:', c.endDate)
+          })
+          ;(Array.isArray(subs) ? subs : []).filter(s => s.status === 'active').forEach(s => {
+            console.log('subscription.id:', s.id, 'type:', s.type, 'startDate:', s.startDate, 'endDate:', s.endDate)
+          })
+        }
         const priceMap = {}
         await Promise.allSettled(subCamps.map(async (c) => {
           try {
@@ -129,12 +141,23 @@ export default function Subscriptions() {
   }, [])
 
   const today = useMemo(() => { const d = new Date(); d.setUTCHours(0,0,0,0); return d }, [])
+
+  // Plan types that student already has an active subscription for → filter out those campaigns
+  const subscribedPlans = useMemo(() => {
+    const plans = new Set()
+    ;(Array.isArray(subscriptions) ? subscriptions : []).filter(s => s.status === 'active').forEach(s => {
+      if (s.type === 'THREE_WEEKS') plans.add('subscription_3weeks')
+      if (s.type === 'FOUR_WEEKS') plans.add('subscription_4weeks')
+    })
+    return plans
+  }, [subscriptions])
+
   const activeCampaigns = useMemo(() => {
-    return campaigns.filter(c => new Date(c.startDate) <= today)
-  }, [campaigns, today])
+    return campaigns.filter(c => new Date(c.startDate) <= today && !subscribedPlans.has(c.type))
+  }, [campaigns, today, subscribedPlans])
   const upcomingCampaigns = useMemo(() => {
-    return campaigns.filter(c => new Date(c.startDate) > today)
-  }, [campaigns, today])
+    return campaigns.filter(c => new Date(c.startDate) > today && !subscribedPlans.has(c.type))
+  }, [campaigns, today, subscribedPlans])
 
   const zone = student?.zone
   const destId = student?.destinationId
@@ -256,11 +279,8 @@ export default function Subscriptions() {
       }
       const plan = campaign.type === 'subscription_3weeks' ? 'THREE_WEEKS' : 'FOUR_WEEKS'
       const weeksCount = plan === 'THREE_WEEKS' ? 3 : 4
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const snapStart = new Date(today)
-      const snapEnd = new Date(today)
-      snapEnd.setDate(snapEnd.getDate() + weeksCount * 7 - 1)
+      const snapStart = new Date(campaign.startDate)
+      const snapEnd = new Date(campaign.endDate)
       const itemData = {
         weeksCount,
         campaignId: campaign.id,
