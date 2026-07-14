@@ -37,7 +37,7 @@ export default function Login() {
       <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/logo.svg" alt="شعار الشركة" className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 mx-auto mb-2 object-contain" />
+          <img src="/full-logo.svg" alt="شعار الشركة" className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 mx-auto mb-2 object-contain" />
           <p className="text-sm text-[var(--color-text-muted)]">نظام النقل الذكي</p>
         </div>
 

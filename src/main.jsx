@@ -9,7 +9,19 @@ import './index.css'
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     if (import.meta.env.PROD) {
-      navigator.serviceWorker.register('/sw.js')
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                const event = new CustomEvent('sw-update-available')
+                window.dispatchEvent(event)
+              }
+            })
+          }
+        })
+      })
     } else {
       navigator.serviceWorker.getRegistrations().then((registrations) =>
         Promise.all(registrations.map((registration) => registration.unregister()))

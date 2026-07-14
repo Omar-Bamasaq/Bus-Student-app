@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js'
 import { authenticate } from '../middleware/auth.js'
 import { getLocalDate } from '../utils/dateUtils.js'
 import { advanceTrackingAfterAttendance, startMorningTrip, completeMorningTrip } from '../services/trackingService.js'
+import { createAndBroadcast } from '../services/notificationService.js'
 
 const router = Router()
 router.use(authenticate)
@@ -100,11 +101,29 @@ router.post('/', async (req, res) => {
       return { today, tomorrow }
     })()
     const activeBus = await prisma.activeBus.findFirst({
-      where: { busId, operation: { operationDate: { gte: today, lt: tomorrow } } },
+      where: { busId, tripType: { not: 'RETURN' }, operation: { operationDate: { gte: today, lt: tomorrow } } },
       select: { id: true },
     })
     if (activeBus) {
       advanceTrackingAfterAttendance(activeBus.id, studentId).catch(() => {})
+    }
+
+    if (status === 'late') {
+      prisma.bus.findUnique({ where: { id: busId }, select: { plateNumber: true, busNumber: true } }).then(bus => {
+        const busLabel = bus?.plateNumber || bus?.busNumber || 'غير معروف'
+        prisma.user.findMany({ where: { role: 'admin' }, select: { id: true } }).then(admins => {
+          const todayStr = new Date().toISOString().slice(0, 10)
+          for (const admin of admins) {
+            createAndBroadcast({
+              userId: admin.id,
+              type: 'student_late',
+              title: 'تسجيل تأخر طالب',
+              message: `تم تسجيل تأخر الطالب ${record.student.name} في الباص ${busLabel}`,
+              dedupKey: `student_late_${admin.id}_${studentId}_${todayStr}`,
+            }).catch(() => {})
+          }
+        })
+      })
     }
 
     res.status(201).json(record)

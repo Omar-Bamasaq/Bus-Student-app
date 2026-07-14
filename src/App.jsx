@@ -112,6 +112,7 @@ export default function App() {
             <Route index element={<Navigate to="users" replace />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path="system" element={<AdminSystemManagement />} />
           </Route>
           <Route path="control" element={<AdminControl />}>
             <Route index element={<Navigate to="transfers" replace />} />
@@ -122,7 +123,7 @@ export default function App() {
           <Route path="emergency/:busId" element={<EmergencyBusDetail />} />
           <Route path="financial-control" element={<FinancialControl />} />
           <Route path="destinations" element={<AdminDestinations />} />
-          <Route path="system" element={<AdminSystemManagement />} />
+          <Route path="system" element={<Navigate to="/admin/manage/system" replace />} />
           <Route path="download-app" element={<DownloadApp />} />
 
           {/* Legacy admin aliases preserved for direct links */}

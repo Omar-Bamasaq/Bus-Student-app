@@ -259,6 +259,22 @@ export async function createSubscriptionNotification(userId, type, title, messag
     })
   }
 
+  // Persistent dedup for expiry notifications: only one notification per
+  // subscription per type, even if createAndBroadcast is called repeatedly.
+  if (type === 'subscription_expiring_soon' || type === 'subscription_expired') {
+    const subscriptionId = data.subscriptionId
+    if (subscriptionId) {
+      const existing = await prisma.notification.findFirst({
+        where: {
+          userId,
+          type,
+          data: { path: ['subscriptionId'], equals: subscriptionId },
+        },
+      })
+      if (existing) return existing
+    }
+  }
+
   return createAndBroadcast({
     userId,
     type,

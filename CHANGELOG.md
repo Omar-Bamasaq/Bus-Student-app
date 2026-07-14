@@ -808,6 +808,101 @@
 
 ---
 
+---
+
+## 2026-07-14 — فصل رحلة الصباح عن رحلة العودة (حساب السائق)
+
+### الوصف
+إصلاح مشكلة ظهور رحلة الصباح القديمة والمكتملة كرحلة نشطة في حساب السائق بعد إنشاء رحلة العودة.
+
+### المشكلة
+- `ActiveBus` لم يكن يحوي حقل `tripType` للتفريق بين رحلة الصباح ورحلة العودة
+- `getTodayOperation()` كان يجلب جميع سجلات `ActiveBus` للعملية دون تصفية، مما يؤدي إلى إرجاع `busStatus` خاطئ عند وجود رحلة عودة
+- كلا الرحلتين تستخدمان نفس جدول `active_buses` دون تمييز
+
+### التغييرات
+
+#### Prisma Schema
+- **`schema.prisma`:** إضافة `tripType TripPeriod @default(MORNING)` إلى `model ActiveBus`
+
+#### Backend — trackingService.js
+- **`startMorningTrip()`:** `findFirst` و `create` يضيفان `tripType: 'MORNING'`
+- **`cancelMorningTrip()`:** `findFirst` يضيف `tripType: 'MORNING'`
+- **`completeMorningTrip()`:** `findFirst` و `create` يضيفان `tripType: 'MORNING'`
+
+#### Backend — operationService.js
+- **`getTodayOperation()`:** `findMany` يضيف `tripType: 'MORNING'` — **التصحيح الأساسي**
+- **`getBusOperationDetail()`:** `findFirst` يضيف `tripType: 'MORNING'`
+- **`generateTodayOperations()`:** إنشاء ActiveBus للعودة يضيف `tripType: 'RETURN'`
+- **`addBusesToOperation()`:** إنشاء ActiveBus للعودة يضيف `tripType: 'RETURN'`
+- **`transferAllStudentsFromBus()`:** استعلامات ActiveBus للعودة تضيف `tripType: 'RETURN'`
+
+#### Backend — return.js
+- **`GET /return/active-buses`:** يضيف `tripType: 'RETURN'`
+- **`POST /return/active-buses`:** `findFirst` و `create` يضيفان `tripType: 'RETURN'`
+- **`GET /return/departed`:** يضيف `tripType: 'RETURN'`
+
+#### Backend — operationStage.js
+- **`getStudentOperationStage()`:** `findFirst` يضيف `tripType: 'MORNING'`
+
+#### Backend — attendance.js
+- **`POST /attendance`:** `findFirst` النشط المضاف يضيف `tripType: 'MORNING'`
+
+#### Frontend — DriverDashboard.jsx
+- إضافة معالجة `busStatus === 'CANCELLED'` عند التحميل الأولي لتحديد `tripStatus = 'cancelled'`
+
+### اختبار التحقق
+- **`morningReturnTripSeparation.test.mjs`:** ثلاثة تأكيدات:
+  1. `getTodayOperation()` ترجع ActiveBus الصباحي (status: ARRIVED) فقط
+  2. `GET /return/active-buses` ترجع ActiveBus الرجوعي (status: AVAILABLE) فقط
+  3. السجلان مختلفان (معرفان مختلفان)
+- النتيجة: ✓ PASS
+
+### ملاحظات التوافق
+- الحقل الجديد `tripType` له قيمة افتراضية `MORNING` — جميع السجلات القديمة تصبح صباحية تلقائياً
+- يجب تشغيل `npx prisma db push` (تم)
+- الفصل يؤثر فقط على الاستعلامات المستقبلية؛ السجلات القديمة بدون `tripType` صريح تحصل على `MORNING` افتراضياً
+
+---
+
+## 2026-07-14
+
+### إصلاح: استعلامات `tripType: 'MORNING'` لا تجد سجلات قديمة ذات `tripType = NULL`
+
+**الوصف:** بعد إضافة حقل `tripType` إلى نموذج `ActiveBus`، استُخدِم `tripType: 'MORNING'` في استعلامات Prisma. لكن السجلات القديمة (التي أُنشئت قبل إضافة الحقل) لها قيمة `tripType = NULL` (وليس `MORNING`) لأن القيمة الافتراضية `@default(MORNING)` تُطبَّق فقط عند الإنشاء وليس بأثر رجعي. هذا تسبّب في:
+
+1. **عدم تحديث واجهة الطالب (Issue 1):** دالة `getStudentOperationStage()` لا تعثر على ActiveBus الصباحي المكتمل → تعيد `BOARDED` بدلاً من `MORNING_COMPLETED` → الطالب يرى رسالة "تم تسجيل حضورك" ولا يرى إتمام الرحلة الصباحية ولا معلومات رحلة العودة.
+2. **عدم إظهار رسالة الإكمال بعد الإنزال (Issue 2):** استعلام `returnBusInfo` في `studentPortal.js` لا يُصفّي حسب `tripType` ويستخدم `findFirst` → قد يرجع BusLoad الصباحي (بدون `droppedOffAt`) بدلاً من BusLoad الرجوعي (مع `droppedOffAt`) → الطالب يرى بطاقة الباص حتى بعد الإنزال.
+
+**الإصلاحات:**
+
+#### Backend — جميع استعلامات الرحلة الصباحية
+- تغيير شرط `tripType: 'MORNING'` إلى `tripType: { not: 'RETURN' }` في كل من:
+  - `operationService.js` — `getTodayOperation()` (سطر 259)، `addBusesToOperation()` (سطر 360)
+  - `trackingService.js` — `startMorningTrip()` (سطر 181, 191)، `cancelMorningTrip()` (سطر 220)، `completeMorningTrip()` (سطر 277, 287)
+  - `attendance.js` — POST `/` (سطر 104)
+  - `operationStage.js` — `getStudentOperationStage()` (سطر 36)
+- القيمة `{ not: 'RETURN' }` تطابق كلاً من `MORNING` (سجلات جديدة) و `NULL` (سجلات قديمة)، وتستثني فقط `RETURN`
+
+#### Backend — استعلام BusLoad في لوحة الطالب
+- `studentPortal.js:103` — إضافة شرط `tripType: 'RETURN'` لضمان إيجاد BusLoad الرجوعي (الذي يحتوي على `droppedOffAt`) بدلاً من BusLoad الصباحي
+
+### اختبار التحقق
+- تحديث `morningReturnTripSeparation.test.mjs` إلى 6 تأكيدات:
+  1. `getTodayOperation()` باستعمال `{ not: 'RETURN' }` تجد ActiveBus الصباحي
+  2. `GET /return/active-buses` تجد ActiveBus الرجوعي
+  3. ActiveBus الصباحي غير موجود في استعلام الرجوع
+  4. جميع السجلات متميزة
+  5. **بالإصلاح:** استعلام `tripType: 'RETURN'` يعيد BusLoad الرجوعي (مع `droppedOffAt`)
+  6. **بدون الإصلاح:** استعلام بدون `tripType` قد يعيد BusLoad الصباحي (بدون `droppedOffAt`)
+- النتيجة: ✓ PASS
+
+### ملاحظات التوافق
+- `{ not: 'RETURN' }` متوافق مع الإصدارات السابقة — جميع السجلات القديمة (NULL) تُعامَل كصباحية
+- استعلامات الرجوع تستخدم `tripType: 'RETURN'` ولا تشمل السجلات القديمة — وهذا مقبول لأن رحلات العودة الجديدة تُنشأ مع `tripType: 'RETURN'`
+
+---
+
 ## قواعد التحديث المستقبلية
 
 1. **كل تعديل** يُسجل في هذا الملف قبل أو مع تنفيذ التعديل

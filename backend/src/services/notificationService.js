@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js'
 import { broadcastNotification, broadcastUnreadCount, broadcastNotificationRead, broadcastNotificationReadAll, broadcastNotificationDeleted, broadcastNotificationDeletedAll } from './socketService.js'
 import { getNotificationDefaults, PRIORITY } from '../config/notificationConfig.js'
+import { sendPushToUser } from './pushNotificationService.js'
 
 const DEDUP_WINDOW_MS = 30 * 1000
 
@@ -32,6 +33,8 @@ export async function createAndBroadcast({ userId, type, title, message, data, p
 
   broadcastNotification(userId, notification)
   broadcastUnreadCount(userId)
+
+  sendPushToUser(userId, notification)
 
   return notification
 }

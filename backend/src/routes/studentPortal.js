@@ -96,11 +96,11 @@ router.get('/dashboard', async (req, res) => {
           where: { operationId: op.id, studentId, status: { not: 'DEPARTED' } },
         })
 
-        if (stage === Stage.MORNING_COMPLETED && returnQueueStatus && (returnQueueStatus.status === 'ASSIGNED' || returnQueueStatus.status === 'DEPARTED')) {
+        if (stage === Stage.MORNING_COMPLETED) {
           const returnLoad = await prisma.busLoad.findFirst({
             where: {
               studentId,
-              activeBus: { operationId: op.id, status: { not: 'CANCELLED' } },
+              activeBus: { operationId: op.id, status: { not: 'CANCELLED' }, tripType: 'RETURN' },
             },
             include: {
               activeBus: {
@@ -246,6 +246,28 @@ router.post('/return-queue/join', async (req, res) => {
     const entry = await prisma.returnQueue.create({
       data: { operationId: op.id, studentId, transportMode: student.transportMode },
     })
+
+    prisma.user.findMany({ where: { role: 'admin' }, select: { id: true } }).then(admins => {
+      if (admins.length > 0) {
+        prisma.assignment.findFirst({
+          where: { studentId, date: { gte: today, lt: tomorrow }, period: 'MORNING' },
+          include: { bus: { select: { plateNumber: true, busNumber: true } } },
+        }).then(assignment => {
+          const busLabel = assignment?.bus?.plateNumber || assignment?.bus?.busNumber || ''
+          const locationInfo = busLabel ? ` في الباص ${busLabel}` : ''
+          for (const admin of admins) {
+            createAndBroadcast({
+              userId: admin.id,
+              type: 'student_in_queue',
+              title: 'طلب رحلة عودة',
+              message: `الطالب ${student.name} طلب رحلة عودة${locationInfo}`,
+              dedupKey: `student_in_queue_${admin.id}_${studentId}_${today.toISOString().slice(0, 10)}`,
+            }).catch(() => {})
+          }
+        })
+      }
+    })
+
     res.status(201).json(entry)
   } catch (error) {
     res.status(500).json({ error: error.message })

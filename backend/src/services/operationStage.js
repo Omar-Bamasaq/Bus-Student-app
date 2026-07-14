@@ -33,7 +33,7 @@ export async function getStudentOperationStage(studentId) {
 
   if (attendance && (attendance.status === 'present' || attendance.status === 'late')) {
     const activeBus = await prisma.activeBus.findFirst({
-      where: { busId: assignment.busId, operation: { operationDate: { gte: today, lt: tomorrow } } },
+      where: { busId: assignment.busId, tripType: { not: 'RETURN' }, operation: { operationDate: { gte: today, lt: tomorrow } } },
     })
     if (activeBus && activeBus.status === 'ARRIVED') return { stage: Stage.MORNING_COMPLETED, assignment, attendance, activeBus }
     return { stage: Stage.BOARDED, assignment, attendance, activeBus }

@@ -118,6 +118,9 @@ export const NOTIFICATION_CONFIG = {
   student_pickup_location_changed: { priority: PRIORITY.INFO, icon: 'MapPin', route: '/student' },
   student_order_changed: { priority: PRIORITY.INFO, icon: 'ListOrdered', route: '/student' },
 
+  // 🔹 Admin - Tracking
+  student_late: { priority: PRIORITY.WARNING, icon: 'Clock', route: '/admin/operations/today' },
+
   // 🔹 Student - Tracking
   student_trip_started: { priority: PRIORITY.INFO, icon: 'Play', route: '/student' },
   student_bus_near: { priority: PRIORITY.INFO, icon: 'Bus', route: '/student' },

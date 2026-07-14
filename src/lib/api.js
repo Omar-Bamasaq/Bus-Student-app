@@ -349,6 +349,12 @@ export const api = {
     manage: () => api.get("/daily-subscriptions/manage"),
   },
 
+  push: {
+    vapidKey: () => api.get("/push/vapid-public-key"),
+    subscribe: (subscription, userAgent) => api.post("/push/subscribe", { subscription, userAgent }),
+    unsubscribe: (endpoint) => api.post("/push/unsubscribe", { endpoint }),
+  },
+
   saturday: {
     subscriptions: () => api.get('/saturday/subscriptions'),
     operation: () => api.get('/saturday/operation'),

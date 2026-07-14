@@ -2,28 +2,57 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Users, Bus, CalendarCheck, ClipboardList,
   FileText, DollarSign, Settings, LogOut, Menu, X, AlertTriangle,
-  CreditCard, Smartphone, Shield, MapPin, CalendarRange, Sun,
+  CreditCard, MapPin, CalendarRange, Sun, Shield,
 } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
-const navItems = [
-  { to: '/admin', label: 'لوحة التحكم', icon: LayoutDashboard, end: true },
-  { to: '/admin/buses', label: 'الباصات', icon: Bus },
-  { to: '/admin/students', label: 'الطلاب', icon: Users },
-  { to: '/admin/operations/today', label: 'تشغيل اليوم', icon: CalendarCheck },
-  { to: '/admin/emergency', label: 'مركز الطوارئ', icon: AlertTriangle },
-  { to: '/admin/operations/return', label: 'رحلات العودة', icon: ClipboardList },
-  { to: '/admin/reports/weekly-sheets', label: 'الكشوف الأسبوعية', icon: FileText },
-  { to: '/admin/subscriptions', label: 'الاشتراكات', icon: DollarSign },
-  { to: '/admin/subscriptions/daily', label: 'اليومي', icon: CalendarRange },
-  { to: '/admin/saturday/operation', label: 'تشغيل السبت', icon: Sun },
-  { to: '/admin/financial-control', label: 'الإدارة المالية', icon: CreditCard },
-  { to: '/admin/manage/users', label: 'المستخدمون', icon: Users },
-  { to: '/admin/manage/settings', label: 'الإعدادات', icon: Settings },
-  { to: '/admin/destinations', label: 'الوجهات', icon: MapPin },
-  { to: '/admin/system', label: 'إدارة النظام', icon: Shield },
-  { to: '/admin/download-app', label: 'تنزيل التطبيق', icon: Smartphone },
+const navGroups = [
+  {
+    label: 'الرئيسية',
+    items: [
+      { to: '/admin', label: 'لوحة التحكم', icon: LayoutDashboard, end: true },
+    ],
+  },
+  {
+    label: 'التشغيل',
+    items: [
+      { to: '/admin/operations/today', label: 'تشغيل اليوم', icon: CalendarCheck },
+      { to: '/admin/operations/return', label: 'رحلات العودة', icon: ClipboardList },
+      { to: '/admin/saturday/operation', label: 'تشغيل السبت', icon: Sun },
+      { to: '/admin/emergency', label: 'مركز الطوارئ', icon: AlertTriangle },
+    ],
+  },
+  {
+    label: 'البيانات',
+    items: [
+      { to: '/admin/buses', label: 'الباصات', icon: Bus },
+      { to: '/admin/students', label: 'الطلاب', icon: Users },
+      { to: '/admin/destinations', label: 'الوجهات', icon: MapPin },
+    ],
+  },
+  {
+    label: 'الاشتراكات والمالية',
+    items: [
+      { to: '/admin/subscriptions', label: 'الاشتراكات', icon: DollarSign },
+      { to: '/admin/subscriptions/daily', label: 'إدارة اليومي', icon: CalendarRange },
+      { to: '/admin/financial-control', label: 'الإدارة المالية', icon: CreditCard },
+    ],
+  },
+  {
+    label: 'التقارير',
+    items: [
+      { to: '/admin/reports/weekly-sheets', label: 'الكشوف الأسبوعية', icon: FileText },
+    ],
+  },
+  {
+    label: 'الإدارة',
+    items: [
+      { to: '/admin/manage/users', label: 'المستخدمون', icon: Users },
+      { to: '/admin/manage/settings', label: 'الإعدادات', icon: Settings },
+      { to: '/admin/manage/system', label: 'إدارة النظام', icon: Shield },
+    ],
+  },
 ]
 
 export default function Sidebar({ collapsed, onToggle }) {
@@ -45,7 +74,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-20 border-b border-[var(--color-border)] shrink-0">
-          <img src="/logo.svg" alt="شعار الشركة" className="w-12 h-12 lg:w-14 lg:h-14 object-contain flex-shrink-0" />
+          <img src="/app-icon.svg" alt="شعار" className="w-12 h-12 lg:w-14 lg:h-14 object-contain flex-shrink-0" />
           <AnimatePresence>
             {!collapsed && (
               <motion.div
@@ -79,27 +108,38 @@ export default function Sidebar({ collapsed, onToggle }) {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5 scrollbar-thin">
-          {navItems.map(item => {
-            const Icon = item.icon
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 rounded-xl text-sm transition-all duration-150 min-h-[44px] ${
-                    isActive
-                      ? 'bg-[var(--color-primary-lighter)] text-[var(--color-primary-dark)] font-medium'
-                      : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-border-light)] hover:text-[var(--color-text)]'
-                  } ${collapsed ? 'justify-center px-3' : ''}`
-                }
-              >
-                <Icon size={18} strokeWidth={1.5} className="shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </NavLink>
-            )
-          })}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin">
+          {navGroups.map(group => (
+            <div key={group.label}>
+              {!collapsed && (
+                <p className="px-3 text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+                  {group.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map(item => {
+                  const Icon = item.icon
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 rounded-xl text-sm transition-all duration-150 min-h-[44px] ${
+                          isActive
+                            ? 'bg-[var(--color-primary-lighter)] text-[var(--color-primary-dark)] font-medium'
+                            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-border-light)] hover:text-[var(--color-text)]'
+                        } ${collapsed ? 'justify-center px-3' : ''}`
+                      }
+                    >
+                      <Icon size={18} strokeWidth={1.5} className="shrink-0" />
+                      {!collapsed && <span>{item.label}</span>}
+                    </NavLink>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Logout */}

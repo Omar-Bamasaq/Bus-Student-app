@@ -145,7 +145,7 @@ export default function WeeklySheetPrint() {
           {/* Logo area */}
           <div style={{ backgroundColor: '#ffffff' }}>
             <img
-              src="/logo.svg"
+              src="/full-logo.svg"
               alt="شعار الشركة"
               style={{ width: '140px', height: 'auto', maxHeight: '140px', objectFit: 'contain', display: 'block' }}
             />

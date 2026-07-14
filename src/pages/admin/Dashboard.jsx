@@ -84,7 +84,7 @@ export default function AdminDashboard() {
     <div className="space-y-4 sm:space-y-6">
       <PageHeader title="لوحة التحكم" subtitle="نظرة عامة على عمليات اليوم">
         <div className="flex items-center gap-2">
-          <img src="/logo.svg" alt="شعار الشركة" className="w-9 sm:w-11 h-9 sm:h-11 object-contain" />
+          <img src="/app-icon.svg" alt="شعار الشركة" className="w-9 sm:w-11 h-9 sm:h-11 object-contain" />
           <span className="text-xs sm:text-sm font-medium text-[var(--color-text-muted)]">تنسيقية مواصلات فلك</span>
         </div>
       </PageHeader>

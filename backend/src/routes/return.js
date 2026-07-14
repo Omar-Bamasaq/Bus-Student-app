@@ -66,7 +66,7 @@ router.get('/active-buses', async (req, res) => {
     })
     if (!op) return res.json([])
     const buses = await prisma.activeBus.findMany({
-      where: { operationId: op.id, status: { notIn: ['BROKEN_DOWN', 'REPLACED'] }, returnCompletedAt: null },
+      where: { operationId: op.id, tripType: 'RETURN', status: { notIn: ['BROKEN_DOWN', 'REPLACED'] }, returnCompletedAt: null },
       include: {
         bus: { select: { id: true, plateNumber: true, capacity: true, model: true, busNumber: true } },
         driver: { select: { id: true, name: true, phone: true } },
@@ -111,14 +111,14 @@ router.post('/active-buses', authorize('admin'), async (req, res) => {
     if (!bus.driver) return res.status(400).json({ error: 'الحافلة لا تملك سائقاً' })
 
     const existing = await prisma.activeBus.findFirst({
-      where: { operationId: op.id, busId, status: { not: 'CANCELLED' } },
+      where: { operationId: op.id, busId, tripType: 'RETURN', status: { not: 'CANCELLED' } },
     })
     if (existing) return res.status(400).json({ error: 'هذه الحافلة موجودة بالفعل في التشغيل' })
 
     const active = await prisma.activeBus.create({
       data: {
         operationId: op.id, busId, driverId: bus.driverId,
-        line: null, capacitySnapshot: bus.capacity,
+        tripType: 'RETURN', line: null, capacitySnapshot: bus.capacity,
       },
       include: {
         bus: { select: { id: true, plateNumber: true, capacity: true, model: true, busNumber: true } },
@@ -589,7 +589,7 @@ router.get('/departed', async (req, res) => {
     })
     if (!op) return res.json([])
     const buses = await prisma.activeBus.findMany({
-      where: { operationId: op.id, status: 'DEPARTED' },
+      where: { operationId: op.id, tripType: 'RETURN', status: 'DEPARTED' },
       include: {
         bus: { select: { id: true, plateNumber: true, model: true } },
         driver: { select: { id: true, name: true, phone: true } },

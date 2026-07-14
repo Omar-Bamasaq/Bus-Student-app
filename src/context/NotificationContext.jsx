@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import { api } from '../lib/api'
+import { subscribeToPush, unsubscribeFromPush } from '../lib/pushManager'
 import {
   connectSocket, onNotificationNew, offNotificationNew,
   onUnreadCount, offUnreadCount,
@@ -60,7 +61,12 @@ export function NotificationProvider({ children }) {
   }, [user])
 
   useEffect(() => {
-    if (user) refreshUnreadCount()
+    if (user) {
+      refreshUnreadCount()
+      subscribeToPush()
+    } else {
+      unsubscribeFromPush()
+    }
   }, [user, refreshUnreadCount])
 
   useEffect(() => {

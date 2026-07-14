@@ -41,6 +41,7 @@ import dailySubscriptionRoutes from './routes/dailySubscriptions.js'
 import cartRoutes from './routes/cart.js'
 import cartApprovalRoutes from './routes/cartApprovals.js'
 import saturdayRoutes from './routes/saturdayOperations.js'
+import pushSubscriptionRoutes from './routes/pushSubscriptions.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -150,6 +151,7 @@ app.use('/api/daily-subscriptions', dailySubscriptionRoutes)
 app.use('/api/student/cart', cartRoutes)
 app.use('/api/approvals/carts', cartApprovalRoutes)
 app.use('/api/saturday', saturdayRoutes)
+app.use('/api/push', pushSubscriptionRoutes)
 
 // Auto-expire temporary transfers every 15 minutes
 import { getLocalDate } from './utils/dateUtils.js'

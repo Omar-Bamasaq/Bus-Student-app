@@ -178,7 +178,7 @@ export async function startMorningTrip(busId) {
   const { today, tomorrow } = todayRange()
 
   let activeBus = await prisma.activeBus.findFirst({
-    where: { busId, operation: { operationDate: { gte: today, lt: tomorrow } } },
+    where: { busId, tripType: { not: 'RETURN' }, operation: { operationDate: { gte: today, lt: tomorrow } } },
   })
   if (!activeBus) {
     const operation = await prisma.dailyOperation.findUnique({ where: { operationDate: today } })
@@ -188,7 +188,7 @@ export async function startMorningTrip(busId) {
     activeBus = await prisma.activeBus.create({
       data: {
         operationId: operation.id, busId, driverId: bus.driverId,
-        capacitySnapshot: bus.capacity, status: 'DEPARTED',
+        tripType: 'MORNING', capacitySnapshot: bus.capacity, status: 'DEPARTED',
       },
     })
   } else {
@@ -217,7 +217,7 @@ export async function cancelMorningTrip(busId) {
   const { today, tomorrow } = todayRange()
 
   const activeBus = await prisma.activeBus.findFirst({
-    where: { busId, operation: { operationDate: { gte: today, lt: tomorrow } } },
+    where: { busId, tripType: { not: 'RETURN' }, operation: { operationDate: { gte: today, lt: tomorrow } } },
   })
   if (!activeBus) throw new Error('الباص غير موجود في تشغيل اليوم')
   if (activeBus.status === 'ARRIVED' || activeBus.status === 'CANCELLED') {
@@ -274,7 +274,7 @@ export async function completeMorningTrip(busId) {
   const { today, tomorrow } = todayRange()
 
   let activeBus = await prisma.activeBus.findFirst({
-    where: { busId, operation: { operationDate: { gte: today, lt: tomorrow } } },
+    where: { busId, tripType: { not: 'RETURN' }, operation: { operationDate: { gte: today, lt: tomorrow } } },
   })
   if (!activeBus) {
     const operation = await prisma.dailyOperation.findUnique({ where: { operationDate: today } })
@@ -284,7 +284,7 @@ export async function completeMorningTrip(busId) {
     activeBus = await prisma.activeBus.create({
       data: {
         operationId: operation.id, busId, driverId: bus.driverId,
-        capacitySnapshot: bus.capacity, status: 'ARRIVED',
+        tripType: 'MORNING', capacitySnapshot: bus.capacity, status: 'ARRIVED',
       },
     })
     await updateAssignmentsStatusByBus(busId, 'completed')
@@ -293,6 +293,21 @@ export async function completeMorningTrip(busId) {
 
     notifyStudentsOnBus(busId, {
       type: 'student_arrived_university', title: 'وصلت إلى الجامعة', message: 'وصل باصك إلى الجامعة بنجاح',
+    })
+
+    prisma.bus.findUnique({ where: { id: busId }, select: { plateNumber: true, busNumber: true } }).then(b => {
+      const busLabel = b?.plateNumber || b?.busNumber || 'غير معروف'
+      prisma.user.findMany({ where: { role: 'admin' }, select: { id: true } }).then(admins => {
+        for (const admin of admins) {
+          createAndBroadcast({
+            userId: admin.id,
+            type: 'morning_trip_completed',
+            title: 'انتهت رحلة صباحية',
+            message: `انتهت رحلة الباص ${busLabel} الصباحية`,
+            dedupKey: `morning_trip_completed_${admin.id}_${busId}_${getLocalDate().toISOString().slice(0, 10)}`,
+          }).catch(() => {})
+        }
+      })
     })
 
     return state
@@ -345,6 +360,21 @@ export async function completeMorningTrip(busId) {
     type: 'student_arrived_university', title: 'وصلت إلى الجامعة', message: 'وصل باصك إلى الجامعة بنجاح',
   })
 
+  prisma.bus.findUnique({ where: { id: busId }, select: { plateNumber: true, busNumber: true } }).then(bus => {
+    const busLabel = bus?.plateNumber || bus?.busNumber || 'غير معروف'
+    prisma.user.findMany({ where: { role: 'admin' }, select: { id: true } }).then(admins => {
+      for (const admin of admins) {
+        createAndBroadcast({
+          userId: admin.id,
+          type: 'morning_trip_completed',
+          title: 'انتهت رحلة صباحية',
+          message: `انتهت رحلة الباص ${busLabel} الصباحية`,
+          dedupKey: `morning_trip_completed_${admin.id}_${busId}_${getLocalDate().toISOString().slice(0, 10)}`,
+        }).catch(() => {})
+      }
+    })
+  })
+
   return state
 }
 
@@ -359,6 +389,7 @@ async function notifyAbsentStudents(busId, unmarkedStudentIds) {
       })
     }
   }
+
 }
 
 async function checkAndSendNotifications(state, activeBusId) {

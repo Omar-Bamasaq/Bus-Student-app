@@ -1,9 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Shield, Users, Settings } from 'lucide-react'
+import { Shield, Users, Settings, Server } from 'lucide-react'
 
 const tabs = [
   { to: 'users', label: 'المستخدمين', icon: Users },
   { to: 'settings', label: 'الإعدادات', icon: Settings },
+  { to: 'system', label: 'إدارة النظام', icon: Server },
 ]
 
 export default function AdminManage() {

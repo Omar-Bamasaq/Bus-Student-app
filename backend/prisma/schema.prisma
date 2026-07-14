@@ -163,6 +163,7 @@ model User {
   weeklySheets      WeeklySheet[]
   weeklySheetVersions WeeklySheetVersion[]
   notifications     Notification[]
+  pushSubscriptions PushSubscription[]
   emergencyLogs     EmergencyLog[]
   emergencyReviews  EmergencyReport[] @relation("ReportReviewer")
   financialSuspensions StudentFinancial[] @relation("FinancialSuspender")
@@ -403,6 +404,7 @@ model ActiveBus {
   bus              Bus            @relation(fields: [busId], references: [id])
   driverId         String
   driver           User           @relation("ActiveBusDriver", fields: [driverId], references: [id])
+  tripType         TripPeriod     @default(MORNING)
   line             BusLine?
   capacitySnapshot Int
   status           ActiveBusStatus @default(AVAILABLE)
@@ -870,4 +872,19 @@ model StudentFinancial {
   @@index([isSuspended])
   @@index([gracePeriodEnd])
   @@map("student_financial")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

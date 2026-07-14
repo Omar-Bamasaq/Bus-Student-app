@@ -99,6 +99,8 @@ export default function DriverDashboard() {
             console.warn('Failed to restore current student index:', err)
           }
         }
+      } else if (myBusData.busStatus === 'CANCELLED') {
+        setTripStatus('cancelled')
       }
 
       try {

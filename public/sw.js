@@ -1,11 +1,11 @@
-const CACHE = 'bus-students-v2'
+const CACHE = 'mashawerk-v1'
 const STATIC = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.svg',
-  '/logo.svg',
-  '/icons.svg',
+  '/app-icon.svg',
+  '/full-logo.svg',
   '/sounds/emergency-alarm.wav',
   '/sounds/info.wav',
   '/sounds/warning.wav',
@@ -40,6 +40,54 @@ self.addEventListener('fetch', (e) => {
   } else {
     e.respondWith(cacheFirst(e.request))
   }
+})
+
+self.addEventListener('push', (e) => {
+  let data
+  try {
+    data = e.data?.json()
+  } catch {}
+
+  if (!data) {
+    data = { title: 'مشوارك', message: 'لديك إشعار جديد', priority: 'INFO' }
+  }
+
+  const options = {
+    title: data.title,
+    body: data.message,
+    icon: '/app-icon.svg',
+    badge: '/app-icon.svg',
+    tag: data.notificationId || `notif-${Date.now()}`,
+    data: {
+      targetRoute: data.targetRoute || '/',
+      notificationId: data.notificationId,
+      type: data.type,
+      priority: data.priority,
+      createdAt: data.createdAt,
+    },
+    vibrate: data.priority === 'CRITICAL' ? [200, 100, 200, 100, 200] : data.priority === 'WARNING' ? [200, 100, 200] : [100, 50, 100],
+    requireInteraction: data.priority === 'CRITICAL',
+    silent: data.priority === 'INFO',
+  }
+
+  e.waitUntil(self.registration.showNotification(options.title, options))
+})
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+
+  const targetRoute = e.notification.data?.targetRoute || '/'
+  const urlToOpen = new URL(targetRoute, self.location.origin).href
+
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      const existingClient = windowClients.find((c) => c.url === urlToOpen)
+      if (existingClient) {
+        return existingClient.focus()
+      }
+      return clients.openWindow(urlToOpen)
+    })
+  )
 })
 
 async function networkFirst(req) {

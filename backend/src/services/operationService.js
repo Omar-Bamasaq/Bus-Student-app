@@ -111,7 +111,7 @@ export async function generateTodayOperations(userId, busIds) {
     // Auto-create ActiveBus records for return operation
     for (const bus of buses) {
       const existing = await tx.activeBus.findFirst({
-        where: { operationId: operation.id, busId: bus.id, status: { not: 'CANCELLED' } }
+        where: { operationId: operation.id, busId: bus.id, tripType: 'RETURN', status: { not: 'CANCELLED' } }
       })
       if (!existing && bus.driver) {
         await tx.activeBus.create({
@@ -119,6 +119,7 @@ export async function generateTodayOperations(userId, busIds) {
             operationId: operation.id,
             busId: bus.id,
             driverId: bus.driverId,
+            tripType: 'RETURN',
             line: null,
             capacitySnapshot: bus.capacity,
           }
@@ -255,7 +256,7 @@ export async function getTodayOperation() {
   }
 
   const activeBuses = operation ? await prisma.activeBus.findMany({
-    where: { operationId: operation.id },
+    where: { operationId: operation.id, tripType: { not: 'RETURN' } },
     select: { id: true, busId: true, status: true }
   }) : []
   const activeBusByBusId = {}
@@ -356,7 +357,7 @@ export async function getBusOperationDetail(busId) {
 
   const hasAnyAttendance = attendances.length > 0
   const activeBus = operation ? await prisma.activeBus.findFirst({
-    where: { busId, operationId: operation.id }
+    where: { busId, operationId: operation.id, tripType: { not: 'RETURN' } }
   }) : null
   const isMorningCompleted = activeBus?.status === 'ARRIVED'
 
@@ -676,7 +677,7 @@ export async function addBusesToOperation(userId, busIds) {
     // Create ActiveBus for return
     for (const bus of buses) {
       const existingActive = await tx.activeBus.findFirst({
-        where: { operationId: operation.id, busId: bus.id, status: { not: 'CANCELLED' } }
+        where: { operationId: operation.id, busId: bus.id, tripType: 'RETURN', status: { not: 'CANCELLED' } }
       })
       if (!existingActive && bus.driver) {
         await tx.activeBus.create({
@@ -684,6 +685,7 @@ export async function addBusesToOperation(userId, busIds) {
             operationId: operation.id,
             busId: bus.id,
             driverId: bus.driverId,
+            tripType: 'RETURN',
             line: null,
             capacitySnapshot: bus.capacity,
           }
@@ -905,10 +907,10 @@ export async function transferAllStudentsFromBus(fromBusId, toBusId, userId) {
     const operation = await tx.dailyOperation.findUnique({ where: { operationDate: today } })
     if (operation) {
       const fromActiveBus = await tx.activeBus.findFirst({
-        where: { operationId: operation.id, busId: fromBusId, status: { not: 'CANCELLED' } }
+        where: { operationId: operation.id, busId: fromBusId, tripType: 'RETURN', status: { not: 'CANCELLED' } }
       })
       const toActiveBus = await tx.activeBus.findFirst({
-        where: { operationId: operation.id, busId: toBusId, status: { not: 'CANCELLED' } }
+        where: { operationId: operation.id, busId: toBusId, tripType: 'RETURN', status: { not: 'CANCELLED' } }
       })
       if (fromActiveBus && toActiveBus) {
         await tx.busLoad.updateMany({

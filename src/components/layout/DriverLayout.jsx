@@ -36,7 +36,7 @@ export default function DriverLayout() {
         <div className="h-full flex flex-col">
           <div className="p-4 border-b">
             <div className="flex items-center gap-3 mb-2">
-              <img src="/logo.svg" alt="شعار" className="w-16 h-16 object-contain" />
+              <img src="/app-icon.svg" alt="شعار" className="w-16 h-16 object-contain" />
               <div>
                 <p className="text-xs text-slate-500">تنسيقية مواصلات فلك</p>
               </div>
@@ -83,7 +83,7 @@ export default function DriverLayout() {
         {/* Mobile header */}
         <header className="bg-white shadow-sm px-3 py-2 flex items-center justify-between lg:hidden">
           <div className="flex items-center gap-2">
-            <img src="/logo.svg" alt="شعار" className="w-10 h-10 object-contain" />
+            <img src="/app-icon.svg" alt="شعار" className="w-10 h-10 object-contain" />
             <span className="text-sm font-bold text-slate-800">{currentPage}</span>
           </div>
           <div className="flex items-center gap-1">

@@ -1,4 +1,4 @@
-const DB_NAME = 'bus-students-offline'
+const DB_NAME = 'mashawerk-offline'
 const DB_VERSION = 3
 
 function openDB() {
