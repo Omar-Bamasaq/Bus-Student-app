@@ -1,8 +1,9 @@
-import { StrictMode } from 'react'
+import { StrictMode, useState, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
+import AppSplashScreen from './components/AppSplashScreen'
 import App from './App.jsx'
 import './index.css'
 
@@ -30,8 +31,22 @@ if ('serviceWorker' in navigator) {
   })
 }
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
+function Root() {
+  const [showSplash, setShowSplash] = useState(() => {
+    const val = sessionStorage.getItem('mashawerk_session_splash')
+    console.log('Splash value:', val)
+    return val !== 'true'
+  })
+
+  const handleSplashFinish = useCallback(() => {
+    setShowSplash(false)
+  }, [])
+
+  if (showSplash) {
+    return <AppSplashScreen onFinish={handleSplashFinish} />
+  }
+
+  return (
     <BrowserRouter>
       <AuthProvider>
         <NotificationProvider>
@@ -39,5 +54,11 @@ createRoot(document.getElementById('root')).render(
         </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
+  )
+}
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <Root />
   </StrictMode>,
 )
