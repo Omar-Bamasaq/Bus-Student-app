@@ -86,7 +86,7 @@ export default function MobileDrawer({ open, onClose }) {
             {/* Header */}
             <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--color-border)]">
               <div className="flex items-center gap-3">
-                <img src="/app-icon.svg" alt="شعار" className="w-9 h-9 sm:w-11 sm:h-11 object-contain" />
+                <img src="/full-logo.svg" alt="شعار" className="w-9 h-9 sm:w-11 sm:h-11 object-contain" />
                 <div>
                   <p className="text-sm font-bold">{user?.name || 'المشرف'}</p>
                   <p className="text-[10px] text-[var(--color-text-muted)]">{user?.role === 'admin' ? 'مدير النظام' : 'مشرف'}</p>

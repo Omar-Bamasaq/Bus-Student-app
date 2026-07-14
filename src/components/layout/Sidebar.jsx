@@ -74,7 +74,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-20 border-b border-[var(--color-border)] shrink-0">
-          <img src="/app-icon.svg" alt="شعار" className="w-12 h-12 lg:w-14 lg:h-14 object-contain flex-shrink-0" />
+          <img src="/full-logo.svg" alt="شعار" className="w-12 h-12 lg:w-14 lg:h-14 object-contain flex-shrink-0" />
           <AnimatePresence>
             {!collapsed && (
               <motion.div
