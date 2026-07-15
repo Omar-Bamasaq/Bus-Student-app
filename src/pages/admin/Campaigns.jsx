@@ -5,6 +5,7 @@ import { api } from '../../lib/api'
 import PageHeader from '../../components/ui/PageHeader'
 import MobileCard from '../../components/ui/MobileCard'
 import { SkeletonCard } from '../../components/ui/Skeleton'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 const emptyForm = { title: '', description: '', type: 'subscription_3weeks', startDate: '', endDate: '', maxStudents: '', hasEarlyDiscount: false, discountAmount: '', discountStart: '', discountExpiry: '', enableExtraRegistrationFee: false, extraRegistrationFee: '2000', extraFeeStart: '' }
 
@@ -15,6 +16,7 @@ export default function AdminCampaigns() {
   const [form, setForm] = useState(emptyForm)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
+  const [showConfirm, setShowConfirm] = useState(null)
 
   async function load() {
     try {
@@ -63,7 +65,12 @@ export default function AdminCampaigns() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('تأكيد حذف الحملة؟')) return
+    setShowConfirm(id)
+  }
+
+  async function handleConfirmed() {
+    const id = showConfirm
+    setShowConfirm(null)
     try { await api.campaigns.delete(id); load() } catch (err) { alert(err.message) }
   }
 
@@ -257,6 +264,16 @@ export default function AdminCampaigns() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        show={!!showConfirm}
+        onClose={() => setShowConfirm(null)}
+        onConfirm={handleConfirmed}
+        title="تأكيد حذف الحملة"
+        danger
+      >
+        هل أنت متأكد من حذف هذه الحملة؟
+      </ConfirmModal>
     </div>
   )
 }

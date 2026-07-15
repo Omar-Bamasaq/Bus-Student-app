@@ -64,9 +64,8 @@ self.addEventListener('push', (e) => {
       priority: data.priority,
       createdAt: data.createdAt,
     },
-    vibrate: data.priority === 'CRITICAL' ? [200, 100, 200, 100, 200] : data.priority === 'WARNING' ? [200, 100, 200] : [100, 50, 100],
+    vibrate: data.priority === 'CRITICAL' ? [200, 100, 200, 100, 200] : data.priority === 'WARNING' ? [200, 100, 200] : [],
     requireInteraction: data.priority === 'CRITICAL',
-    silent: data.priority === 'INFO',
   }
 
   e.waitUntil(self.registration.showNotification(options.title, options))

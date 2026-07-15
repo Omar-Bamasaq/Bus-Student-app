@@ -48,6 +48,8 @@ export async function sendPushToUser(userId, payload) {
       }, data).catch(async (err) => {
         if (err.statusCode === 410 || err.statusCode === 404) {
           await prisma.pushSubscription.delete({ where: { id: sub.id } })
+        } else {
+          console.error(`[Push] send failed for ${sub.endpoint.slice(0, 30)}...:`, err.statusCode || err.message)
         }
       })
     )

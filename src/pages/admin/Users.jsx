@@ -11,6 +11,7 @@ import DataTable from '../../components/ui/DataTable'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Section from '../../components/ui/Section'
 import EmptyState from '../../components/ui/EmptyState'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 const roleIcons = { admin: Shield, driver: Bus, student: GraduationCap }
 const roleLabels = { admin: 'مشرف', driver: 'سائق', student: 'طالب' }
@@ -26,6 +27,7 @@ export default function AdminUsers() {
   const [createForm, setCreateForm] = useState({ username: '', name: '', phone: '', password: '', role: 'driver' })
   const [resetResult, setResetResult] = useState(null)
   const [actionLoading, setActionLoading] = useState(null)
+  const [showConfirm, setShowConfirm] = useState(null)
 
   async function load() {
     try {
@@ -51,7 +53,12 @@ export default function AdminUsers() {
   }
 
   async function handleResetPassword(id) {
-    if (!confirm('تأكيد إعادة تعيين كلمة المرور؟')) return
+    setShowConfirm(id)
+  }
+
+  async function handleConfirmed() {
+    const id = showConfirm
+    setShowConfirm(null)
     setActionLoading(id)
     try {
       const result = await api.users.resetPassword(id)
@@ -239,6 +246,16 @@ export default function AdminUsers() {
       <DataTable columns={columns} data={users} loading={loading}
         emptyTitle="لا توجد نتائج" emptyDescription="لم يتم العثور على مستخدمين"
         emptyAction={filterRole || filterStatus || searchTerm ? { label: 'مسح الفلتر', onClick: () => { setFilterRole(''); setFilterStatus(''); setSearchTerm('') } } : undefined} />
+
+      <ConfirmModal
+        show={!!showConfirm}
+        onClose={() => setShowConfirm(null)}
+        onConfirm={handleConfirmed}
+        title="تأكيد إعادة تعيين كلمة المرور"
+        danger
+      >
+        هل أنت متأكد من إعادة تعيين كلمة المرور لهذا المستخدم؟
+      </ConfirmModal>
     </div>
   )
 }

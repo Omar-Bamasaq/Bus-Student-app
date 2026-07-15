@@ -10,6 +10,7 @@ import KpiCard from '../../components/ui/KpiCard'
 import { SkeletonCard } from '../../components/ui/Skeleton'
 import ResponsiveKpiGrid from '../../components/ui/ResponsiveKpiGrid'
 import BusOperationDetail from './BusOperationDetail'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 import { onDailyExceptionsUpdate, offDailyExceptionsUpdate } from '../../lib/socket'
 
 export default function AdminDailyOperation() {
@@ -28,6 +29,7 @@ export default function AdminDailyOperation() {
   const [showExceptions, setShowExceptions] = useState(true)
   const [exceptionStudentForBus, setExceptionStudentForBus] = useState(null)
   const [showStartWarning, setShowStartWarning] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(null)
 
   useEffect(() => {
     onDailyExceptionsUpdate(() => { loadExceptions() })
@@ -159,7 +161,12 @@ export default function AdminDailyOperation() {
   }
 
   async function handleRemoveBus(busId, busNumber) {
-    if (!confirm(`إزالة الباص ${busNumber} من تشغيل اليوم؟\n(هذا لا يؤثر على الباص أو القالب)`)) return
+    setShowConfirm({ busId, busNumber })
+  }
+
+  async function handleConfirmed() {
+    const { busId } = showConfirm
+    setShowConfirm(null)
     try {
       await api.operations.removeBus(busId)
       await load()
@@ -230,6 +237,9 @@ export default function AdminDailyOperation() {
           expectedStudents={expectedStudents}
           generating={generating}
           onGenerate={handleGenerateWithCheck}
+          showConfirm={showConfirm}
+          setShowConfirm={setShowConfirm}
+          handleConfirmed={handleConfirmed}
         />
       </div>
     )
@@ -433,6 +443,9 @@ export default function AdminDailyOperation() {
         generating={generating}
         onGenerate={handleAddBusesWithCheck}
         mode="add"
+        showConfirm={showConfirm}
+        setShowConfirm={setShowConfirm}
+        handleConfirmed={handleConfirmed}
       />
 
       {selectedBus && (
@@ -520,7 +533,8 @@ export default function AdminDailyOperation() {
 function CreateOperationDialog({
   show, onClose, availableBuses, loading, selectedBusIds,
   onToggle, onSelectAll, expectedStudents, generating, onGenerate,
-  mode = 'create'
+  mode = 'create',
+  showConfirm, setShowConfirm, handleConfirmed,
 }) {
   const [search, setSearch] = useState('')
 
@@ -532,6 +546,7 @@ function CreateOperationDialog({
     : availableBuses
 
   return (
+    <>
     <Modal
       show={show}
       onClose={onClose}
@@ -651,6 +666,20 @@ function CreateOperationDialog({
           </div>
         </>
       )}
+
     </Modal>
+
+      <ConfirmModal
+        show={!!showConfirm}
+        onClose={() => setShowConfirm(null)}
+        onConfirm={handleConfirmed}
+        title="تأكيد إزالة الباص"
+        danger
+      >
+        إزالة الباص {showConfirm?.busNumber} من تشغيل اليوم؟
+        <br />
+        <span className="text-xs text-gray-400">(هذا لا يؤثر على الباص أو القالب)</span>
+      </ConfirmModal>
+    </>
   )
 }

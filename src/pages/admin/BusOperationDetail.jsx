@@ -5,6 +5,7 @@ import Modal from '../../components/ui/Modal'
 import { api } from '../../lib/api'
 import { connectSocket, joinBusRoom, leaveBusRoom, onTrackingUpdate, offTrackingUpdate } from '../../lib/socket'
 import StatusBadge from '../../components/ui/StatusBadge'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 const dayNames = { SATURDAY: 'السبت', SUNDAY: 'الأحد', MONDAY: 'الإثنين', TUESDAY: 'الثلاثاء', WEDNESDAY: 'الأربعاء', THURSDAY: 'الخميس', FRIDAY: 'الجمعة' }
 
@@ -23,6 +24,7 @@ export default function BusOperationDetail({ busId, onClose, onRefresh }) {
   const [bulkMins, setBulkMins] = useState(10)
   const [tracking, setTracking] = useState(null)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(null)
 
   async function load() {
     try {
@@ -87,7 +89,12 @@ export default function BusOperationDetail({ busId, onClose, onRefresh }) {
   }
 
   async function handleRemove(assignmentId, studentName) {
-    if (!confirm(`حذف ${studentName} من رحلة اليوم فقط؟\n(هذا لا يؤثر على القالب ولا على بيانات الطالب الدائمة)`)) return
+    setShowConfirm({ assignmentId, studentName })
+  }
+
+  async function handleConfirmed() {
+    const { assignmentId } = showConfirm
+    setShowConfirm(null)
     try { await api.operations.removeStudent(busId, assignmentId); load() } catch (err) { alert(err.message) }
   }
 

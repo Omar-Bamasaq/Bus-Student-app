@@ -7,6 +7,7 @@ import Modal from '../../components/ui/Modal'
 import PageHeader from '../../components/ui/PageHeader'
 import { SkeletonCard } from '../../components/ui/Skeleton'
 import { getSocket, onReconnect } from '../../lib/socket'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 export default function SaturdayOperation() {
   const navigate = useNavigate()
@@ -22,6 +23,9 @@ export default function SaturdayOperation() {
   const [addStudentModal, setAddStudentModal] = useState(null)
   const [assigningStudent, setAssigningStudent] = useState(false)
   const [pickupTime, setPickupTime] = useState('')
+  const [confirmRemoveStudent, setConfirmRemoveStudent] = useState(null)
+  const [confirmRemoveBus, setConfirmRemoveBus] = useState(null)
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
 
   useEffect(() => {
     const socket = getSocket()
@@ -124,7 +128,12 @@ export default function SaturdayOperation() {
   }
 
   async function handleRemoveStudent(busId, studentId, name) {
-    if (!confirm(`حذف ${name} من الباص؟`)) return
+    setConfirmRemoveStudent({ busId, studentId, name })
+  }
+
+  async function confirmedRemoveStudent() {
+    const { busId, studentId } = confirmRemoveStudent
+    setConfirmRemoveStudent(null)
     try {
       await api.saturday.removeStudent(busId, studentId)
       await load()
@@ -134,7 +143,11 @@ export default function SaturdayOperation() {
   }
 
   async function handleClose() {
-    if (!confirm('إنهاء تشغيل السبت؟\nلن يتمكن الطلاب من تعديل التوزيع بعد الإنهاء.')) return
+    setShowCloseConfirm(true)
+  }
+
+  async function handleConfirmedClose() {
+    setShowCloseConfirm(false)
     setClosing(true)
     try {
       await api.saturday.close()
@@ -148,7 +161,12 @@ export default function SaturdayOperation() {
   }
 
   async function handleRemoveBus(busId, busNumber) {
-    if (!confirm(`حذف الباص ${busNumber} من تشغيل السبت؟\nسيتم إعادة جميع طلابه إلى قائمة غير الموزعين.`)) return
+    setConfirmRemoveBus({ busId, busNumber })
+  }
+
+  async function confirmedRemoveBus() {
+    const { busId } = confirmRemoveBus
+    setConfirmRemoveBus(null)
     try {
       await api.saturday.removeBus(busId)
       await load()
@@ -349,8 +367,43 @@ export default function SaturdayOperation() {
                             <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
                               الباص الأساسي: {bs.bus?.busNumber}
                             </div>
-                          )}
-                        </div>
+      )}
+
+      <ConfirmModal
+        show={!!confirmRemoveStudent}
+        onClose={() => setConfirmRemoveStudent(null)}
+        onConfirm={confirmedRemoveStudent}
+        title="تأكيد حذف الطالب"
+        danger
+      >
+        حذف {confirmRemoveStudent?.name} من الباص؟
+      </ConfirmModal>
+
+      <ConfirmModal
+        show={!!confirmRemoveBus}
+        onClose={() => setConfirmRemoveBus(null)}
+        onConfirm={confirmedRemoveBus}
+        title="تأكيد حذف الباص"
+        danger
+      >
+        حذف الباص {confirmRemoveBus?.busNumber} من تشغيل السبت؟
+        <br />
+        <span className="text-xs text-gray-400">سيتم إعادة جميع طلابه إلى قائمة غير الموزعين.</span>
+      </ConfirmModal>
+
+      <ConfirmModal
+        show={showCloseConfirm}
+        onClose={() => setShowCloseConfirm(false)}
+        onConfirm={handleConfirmedClose}
+        title="إنهاء تشغيل السبت"
+        loading={closing}
+        danger
+      >
+        إنهاء تشغيل السبت؟
+        <br />
+        <span className="text-xs text-gray-400">لن يتمكن الطلاب من تعديل التوزيع بعد الإنهاء.</span>
+      </ConfirmModal>
+    </div>
                         <button
                           onClick={() => setAddStudentModal(sub)}
                           className="btn-primary btn-sm shrink-0"

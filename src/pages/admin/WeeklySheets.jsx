@@ -9,6 +9,7 @@ import StatusBadge from '../../components/ui/StatusBadge'
 import { SkeletonCard } from '../../components/ui/Skeleton'
 import ResponsiveKpiGrid from '../../components/ui/ResponsiveKpiGrid'
 import EmptyState from '../../components/ui/EmptyState'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 function parseDate(str) {
   const [y, m, d] = str.split('-').map(Number)
@@ -37,6 +38,7 @@ export default function AdminSheets() {
   const [generating, setGenerating] = useState(false)
   const [deleting, setDeleting] = useState(null)
   const [weekStart, setWeekStart] = useState(formatDate(snapToSaturday(new Date())))
+  const [showConfirm, setShowConfirm] = useState(null)
   const navigate = useNavigate()
 
   const load = useCallback(async () => {
@@ -65,9 +67,12 @@ export default function AdminSheets() {
   }
 
   async function handleDelete(sheetId) {
-    if (!window.confirm('هل أنت متأكد من حذف هذا الكشف؟')) {
-      return
-    }
+    setShowConfirm(sheetId)
+  }
+
+  async function handleConfirmed() {
+    const sheetId = showConfirm
+    setShowConfirm(null)
     setDeleting(sheetId)
     try {
       await api.weeklySheets.delete(sheetId)
@@ -180,6 +185,16 @@ export default function AdminSheets() {
           </button>
         </div>
       )}
+
+      <ConfirmModal
+        show={!!showConfirm}
+        onClose={() => setShowConfirm(null)}
+        onConfirm={handleConfirmed}
+        title="تأكيد حذف الكشف"
+        danger
+      >
+        هل أنت متأكد من حذف هذا الكشف؟
+      </ConfirmModal>
     </div>
   )
 }

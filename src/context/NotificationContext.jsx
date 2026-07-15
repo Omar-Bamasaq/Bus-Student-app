@@ -63,7 +63,7 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     if (user) {
       refreshUnreadCount()
-      subscribeToPush()
+      subscribeToPush().catch((err) => console.error('[Push] subscribe failed:', err))
     } else {
       unsubscribeFromPush()
     }

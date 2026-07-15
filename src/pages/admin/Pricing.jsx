@@ -6,6 +6,7 @@ import PageHeader from '../../components/ui/PageHeader'
 import Section from '../../components/ui/Section'
 import ResponsiveKpiGrid from '../../components/ui/ResponsiveKpiGrid'
 import { SkeletonCard } from '../../components/ui/Skeleton'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 const planTypes = [
   { key: 'DAILY', label: 'يومي' },
@@ -32,6 +33,7 @@ export default function AdminPricing() {
   const [copyTargetId, setCopyTargetId] = useState('')
   const [copying, setCopying] = useState(false)
   const [selectedDestPrices, setSelectedDestPrices] = useState([])
+  const [showConfirm, setShowConfirm] = useState(null)
 
   useEffect(() => {
     initialLoad()
@@ -146,7 +148,12 @@ export default function AdminPricing() {
   }
 
   async function handleDeleteDestPrices(destId) {
-    if (!confirm('هل تريد حذف أسعار هذه الوجهة للمنطقة؟')) return
+    setShowConfirm({ type: 'destPrices', destId })
+  }
+
+  async function confirmedDeleteDestPrices() {
+    const destId = showConfirm.destId
+    setShowConfirm(null)
     try {
       await api.pricing.update(selectedZoneId, {
         prices: planTypes.map(item => ({
@@ -182,7 +189,12 @@ export default function AdminPricing() {
   }
 
   async function handleDeleteZone() {
-    if (!selectedZoneId || !confirm('هل أنت متأكد من حذف هذه المنطقة؟')) return
+    if (!selectedZoneId) return
+    setShowConfirm({ type: 'zone' })
+  }
+
+  async function confirmedDeleteZone() {
+    setShowConfirm(null)
     setSaving(true)
     try {
       await api.pricing.delete(selectedZoneId)
@@ -193,6 +205,14 @@ export default function AdminPricing() {
       alert(err.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleConfirmed() {
+    if (showConfirm?.type === 'destPrices') {
+      await confirmedDeleteDestPrices()
+    } else if (showConfirm?.type === 'zone') {
+      await confirmedDeleteZone()
     }
   }
 
@@ -418,6 +438,18 @@ export default function AdminPricing() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        show={!!showConfirm}
+        onClose={() => setShowConfirm(null)}
+        onConfirm={handleConfirmed}
+        title={showConfirm?.type === 'zone' ? 'تأكيد حذف المنطقة' : 'تأكيد حذف الأسعار'}
+        danger
+      >
+        {showConfirm?.type === 'zone'
+          ? 'هل أنت متأكد من حذف هذه المنطقة وجميع أسعارها؟'
+          : 'هل تريد حذف أسعار هذه الوجهة للمنطقة؟'}
+      </ConfirmModal>
     </div>
   )
 }

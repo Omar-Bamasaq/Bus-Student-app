@@ -7,6 +7,7 @@ import Section from '../../components/ui/Section'
 import ResponsiveKpiGrid from '../../components/ui/ResponsiveKpiGrid'
 import { SkeletonCard } from '../../components/ui/Skeleton'
 import EmptyState from '../../components/ui/EmptyState'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 export default function AdminDestinations() {
   const [destinations, setDestinations] = useState([])
@@ -16,6 +17,7 @@ export default function AdminDestinations() {
   const [name, setName] = useState('')
   const [sortOrder, setSortOrder] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(null)
 
   async function load() {
     setLoading(true)
@@ -75,7 +77,12 @@ export default function AdminDestinations() {
   }
 
   async function handleDelete(dest) {
-    if (!confirm(`هل تريد حذف الوجهة "${dest.name}"؟`)) return
+    setShowConfirm(dest)
+  }
+
+  async function handleConfirmed() {
+    const dest = showConfirm
+    setShowConfirm(null)
     try {
       await api.destinations.delete(dest.id)
       load()
@@ -195,6 +202,16 @@ export default function AdminDestinations() {
           </div>
         )}
       </Section>
+
+      <ConfirmModal
+        show={!!showConfirm}
+        onClose={() => setShowConfirm(null)}
+        onConfirm={handleConfirmed}
+        title="تأكيد حذف الوجهة"
+        danger
+      >
+        هل تريد حذف الوجهة "{showConfirm?.name}"؟
+      </ConfirmModal>
     </div>
   )
 }

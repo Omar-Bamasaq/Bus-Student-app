@@ -21,6 +21,7 @@ import DataTable from "../../components/ui/DataTable";
 import { SkeletonCard } from "../../components/ui/Skeleton";
 import ResponsiveKpiGrid from '../../components/ui/ResponsiveKpiGrid'
 import EmptyState from "../../components/ui/EmptyState";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 
 const dayOptions = [
   { value: "SATURDAY", label: "السبت" },
@@ -68,6 +69,7 @@ export default function AdminStudents() {
   const [filterMode, setFilterMode] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [credentials, setCredentials] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(null);
 
   async function load() {
     try {
@@ -175,7 +177,12 @@ export default function AdminStudents() {
   }
 
   async function handleDelete(id) {
-    if (!confirm("تأكيد حذف الطالب؟")) return;
+    setShowConfirm(id)
+  }
+
+  async function handleConfirmed() {
+    const id = showConfirm
+    setShowConfirm(null)
     try {
       await api.students.delete(id);
       load();
@@ -741,6 +748,16 @@ export default function AdminStudents() {
           </motion.div>
         </div>
       )}
+
+      <ConfirmModal
+        show={!!showConfirm}
+        onClose={() => setShowConfirm(null)}
+        onConfirm={handleConfirmed}
+        title="تأكيد حذف الطالب"
+        danger
+      >
+        هل أنت متأكد من حذف هذا الطالب؟
+      </ConfirmModal>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
-import SplashScreen from './components/SplashScreen'
 import Onboarding from './components/Onboarding'
 import AuthLayout from './components/layout/AuthLayout'
 import AdminLayout from './components/layout/AdminLayout'
@@ -65,28 +64,16 @@ function RoleRedirect() {
 }
 
 export default function App() {
-  const [showSplash, setShowSplash] = useState(true)
-  const [showOnboarding, setShowOnboarding] = useState(false)
-
-  const onboardingSeen = localStorage.getItem('mashawerk_onboarding_seen')
-  const token = localStorage.getItem('token')
-  const isNewUser = !onboardingSeen && !token
-
-  const handleSplashFinish = useCallback(() => {
-    setShowSplash(false)
-    if (isNewUser) {
-      setShowOnboarding(true)
-    }
-  }, [isNewUser])
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    const onboardingSeen = localStorage.getItem('mashawerk_onboarding_seen')
+    const token = localStorage.getItem('token')
+    return !onboardingSeen && !token
+  })
 
   const handleOnboardingComplete = useCallback(() => {
     localStorage.setItem('mashawerk_onboarding_seen', 'true')
     setShowOnboarding(false)
   }, [])
-
-  if (showSplash) {
-    return <SplashScreen duration={isNewUser ? 4000 : 2000} onFinish={handleSplashFinish} />
-  }
 
   if (showOnboarding) {
     return <Onboarding onComplete={handleOnboardingComplete} />

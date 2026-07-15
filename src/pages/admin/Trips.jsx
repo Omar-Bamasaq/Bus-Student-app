@@ -6,6 +6,7 @@ import PageHeader from '../../components/ui/PageHeader'
 import DataTable from '../../components/ui/DataTable'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Section from '../../components/ui/Section'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 const statusMap = {
   scheduled: 'مجدولة', in_progress: 'قيد التنفيذ', completed: 'مكتملة', cancelled: 'ملغية',
@@ -38,6 +39,7 @@ export default function AdminTrips() {
   const [extraIds, setExtraIds] = useState(new Set())
   const [submitting, setSubmitting] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [showConfirm, setShowConfirm] = useState(null)
 
   async function load() {
     try {
@@ -112,7 +114,12 @@ export default function AdminTrips() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('تأكيد الحذف؟')) return
+    setShowConfirm(id)
+  }
+
+  async function handleConfirmed() {
+    const id = showConfirm
+    setShowConfirm(null)
     try { await api.assignments.delete(id); load() } catch (err) { alert(err.message) }
   }
 
@@ -276,6 +283,16 @@ export default function AdminTrips() {
 
       <DataTable columns={columns} data={assignments} loading={loading}
         emptyTitle="لا توجد رحلات" emptyDescription="لم يتم إنشاء أي رحلات بعد" emptyAction={{ label: 'إضافة رحلة', onClick: openForm }} />
+
+      <ConfirmModal
+        show={!!showConfirm}
+        onClose={() => setShowConfirm(null)}
+        onConfirm={handleConfirmed}
+        title="تأكيد الحذف"
+        danger
+      >
+        هل أنت متأكد من حذف هذه الرحلة؟
+      </ConfirmModal>
     </div>
   )
 }

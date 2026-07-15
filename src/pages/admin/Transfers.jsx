@@ -7,6 +7,7 @@ import Section from '../../components/ui/Section'
 import StatusBadge from '../../components/ui/StatusBadge'
 import DataTable from '../../components/ui/DataTable'
 import { SkeletonCard } from '../../components/ui/Skeleton'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 const emptyForm = { studentId: '', fromBusId: '', toBusId: '', startDate: '', endDate: '', reason: '' }
 
@@ -19,6 +20,7 @@ export default function AdminTransfers() {
   const [form, setForm] = useState(emptyForm)
   const [editing, setEditing] = useState(null)
   const [studentSearch, setStudentSearch] = useState('')
+  const [showConfirm, setShowConfirm] = useState(null)
 
   async function load() {
     try {
@@ -50,7 +52,12 @@ export default function AdminTransfers() {
   }
 
   async function handleCancel(id) {
-    if (!confirm('تأكيد إلغاء التحويل؟')) return
+    setShowConfirm(id)
+  }
+
+  async function handleConfirmed() {
+    const id = showConfirm
+    setShowConfirm(null)
     try { await api.transfers.cancel(id); load() } catch (err) { alert(err.message) }
   }
 
@@ -162,6 +169,16 @@ export default function AdminTransfers() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        show={!!showConfirm}
+        onClose={() => setShowConfirm(null)}
+        onConfirm={handleConfirmed}
+        title="تأكيد إلغاء التحويل"
+        danger
+      >
+        هل أنت متأكد من إلغاء هذا التحويل؟
+      </ConfirmModal>
     </div>
   )
 }

@@ -8,6 +8,7 @@ import StatusBadge from '../../../components/ui/StatusBadge'
 import DataTable from '../../../components/ui/DataTable'
 import ResponsiveKpiGrid from '../../../components/ui/ResponsiveKpiGrid'
 import { SkeletonCard } from '../../../components/ui/Skeleton'
+import ConfirmModal from '../../../components/ui/ConfirmModal'
 
 const emptyForm = { busNumber: '', capacity: '', vehicleType: '', color: '', driverId: '', driverName: '', primaryPhone: '', secondaryPhone: '' }
 
@@ -26,6 +27,7 @@ export default function AdminBuses() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [editing, setEditing] = useState(null)
+  const [showConfirm, setShowConfirm] = useState(null)
 
   async function load() {
     try {
@@ -76,7 +78,12 @@ export default function AdminBuses() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('تأكيد حذف الحافلة؟')) return
+    setShowConfirm(id)
+  }
+
+  async function handleConfirmed() {
+    const id = showConfirm
+    setShowConfirm(null)
     try { await api.buses.delete(id); load() } catch (err) { alert(err.message) }
   }
 
@@ -239,6 +246,16 @@ export default function AdminBuses() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        show={!!showConfirm}
+        onClose={() => setShowConfirm(null)}
+        onConfirm={handleConfirmed}
+        title="تأكيد حذف الحافلة"
+        danger
+      >
+        هل أنت متأكد من حذف هذه الحافلة؟
+      </ConfirmModal>
     </div>
   )
 }

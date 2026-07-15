@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bus, Users, Search, Plus, X, GripVertical, Phone, MessageCircle, MapPin } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 export default function ReturnDispatchCenter() {
   const [loading, setLoading] = useState(true)
@@ -16,6 +17,8 @@ export default function ReturnDispatchCenter() {
   const [showAddStudent, setShowAddStudent] = useState(false)
   const [addStudentSearch, setAddStudentSearch] = useState('')
   const [transferMode, setTransferMode] = useState(null)
+  const [confirmRemoveQueueId, setConfirmRemoveQueueId] = useState(null)
+  const [confirmRemoveBusStudentId, setConfirmRemoveBusStudentId] = useState(null)
 
   const dateStr = new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -52,6 +55,12 @@ export default function ReturnDispatchCenter() {
   }
 
   async function handleRemoveFromQueue(id) {
+    setConfirmRemoveQueueId(id)
+  }
+
+  async function confirmRemoveQueue() {
+    const id = confirmRemoveQueueId
+    setConfirmRemoveQueueId(null)
     try { await api.return.queue.remove(id); loadAll() } catch (err) { alert(err.message) }
   }
 
@@ -74,6 +83,12 @@ export default function ReturnDispatchCenter() {
   }
 
   async function handleRemoveFromBus(studentId) {
+    setConfirmRemoveBusStudentId(studentId)
+  }
+
+  async function confirmRemoveBus() {
+    const studentId = confirmRemoveBusStudentId
+    setConfirmRemoveBusStudentId(null)
     try {
       await api.return.loads.remove(selectedBus.id, studentId)
       loadAll()
@@ -474,6 +489,26 @@ export default function ReturnDispatchCenter() {
           </>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        show={!!confirmRemoveQueueId}
+        onClose={() => setConfirmRemoveQueueId(null)}
+        onConfirm={confirmRemoveQueue}
+        title="تأكيد الحذف من قائمة الانتظار"
+        danger
+      >
+        هل أنت متأكد من حذف هذا الطالب من قائمة الانتظار؟
+      </ConfirmModal>
+
+      <ConfirmModal
+        show={!!confirmRemoveBusStudentId}
+        onClose={() => setConfirmRemoveBusStudentId(null)}
+        onConfirm={confirmRemoveBus}
+        title="تأكيد حذف الطالب من الباص"
+        danger
+      >
+        هل أنت متأكد من حذف هذا الطالب من الباص؟
+      </ConfirmModal>
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Bus, Clock, MapPin, Phone, Check, X, Bell, ArrowLeft, Users, MessageCircle, LogIn } from 'lucide-react'
 import { api } from '../../lib/api'
 import { connectSocket, joinBusRoom, leaveBusRoom, onTrackingUpdate, offTrackingUpdate, onNotificationNew, offNotificationNew, joinNotificationRoom, onStudentUpdate, offStudentUpdate } from '../../lib/socket'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 const Stage = {
   NO_TRIP: 'NO_TRIP',
@@ -130,7 +131,14 @@ export default function Home() {
     }
   }, [data?.todayAssignment?.busId])
 
-  const handleJoinReturnQueue = async () => {
+  const [showReturnConfirm, setShowReturnConfirm] = useState(false)
+
+  const handleJoinReturnQueue = () => {
+    setShowReturnConfirm(true)
+  }
+
+  const handleConfirmReturn = async () => {
+    setShowReturnConfirm(false)
     setJoining(true)
     try {
       await api.studentPortal.joinReturnQueue()
@@ -442,6 +450,17 @@ function MorningTripCard({ bus, todayAssignment, student, busStudents, tracking,
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        show={showReturnConfirm}
+        onClose={() => setShowReturnConfirm(false)}
+        onConfirm={handleConfirmReturn}
+        title="تأكيد طلب رحلة العودة"
+        loading={joining}
+      >
+        <p>هل أنت متأكد من طلب رحلة العودة؟</p>
+        <p className="text-xs text-slate-400 mt-2">بعد التأكيد، سيتم إضافتك إلى قائمة انتظار رحلة العودة وإشعار السائق.</p>
+      </ConfirmModal>
     </>
   )
 }

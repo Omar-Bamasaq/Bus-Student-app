@@ -2,15 +2,10 @@ import { prisma } from '../lib/prisma.js'
 import { createAuditLog } from '../lib/audit.js'
 import { broadcastEmergencyReport, broadcastReportUpdate, notifyStudent } from './socketService.js'
 import { createAndBroadcast } from './notificationService.js'
-
-function getToday() {
-  const today = new Date()
-  today.setUTCHours(0, 0, 0, 0)
-  return today
-}
+import { getLocalDate } from '../utils/dateUtils.js'
 
 export async function getEmergencyBuses() {
-  const today = getToday()
+  const today = getLocalDate()
 
   const assignments = await prisma.assignment.findMany({
     where: { date: today, period: 'MORNING' },
@@ -60,7 +55,7 @@ export async function getEmergencyBuses() {
 }
 
 export async function declareBreakdown(busId, userId, reason) {
-  const today = getToday()
+  const today = getLocalDate()
 
   const operation = await prisma.dailyOperation.findUnique({ where: { operationDate: today } })
   if (!operation) throw new Error('لا يوجد تشغيل لليوم')
@@ -118,7 +113,7 @@ export async function declareBreakdown(busId, userId, reason) {
 }
 
 export async function autoTransferStudents(fromBusId, toBusIds, userId, reason) {
-  const today = getToday()
+  const today = getLocalDate()
 
   if (!toBusIds || toBusIds.length === 0) throw new Error('يجب اختيار باص واحد على الأقل')
 
@@ -279,7 +274,7 @@ export async function autoTransferStudents(fromBusId, toBusIds, userId, reason) 
 }
 
 export async function manualTransferStudents(fromBusId, transfers, userId, reason) {
-  const today = getToday()
+  const today = getLocalDate()
 
   if (!transfers || transfers.length === 0) throw new Error('يجب نقل طالب واحد على الأقل')
 
@@ -380,7 +375,7 @@ export async function manualTransferStudents(fromBusId, transfers, userId, reaso
 }
 
 export async function replaceBus(fromBusId, toBusId, userId, reason) {
-  const today = getToday()
+  const today = getLocalDate()
 
   if (fromBusId === toBusId) throw new Error('لا يمكن استبدال الباص بنفسه')
 
@@ -552,7 +547,7 @@ function getReasonText(reason) {
 // ─── Emergency Reports (V2) ───
 
 export async function createEmergencyReport(busId, driverId, reason, notes) {
-  const today = getToday()
+  const today = getLocalDate()
 
   const operation = await prisma.dailyOperation.findUnique({ where: { operationDate: today } })
   if (!operation) throw new Error('لا يوجد تشغيل لليوم')

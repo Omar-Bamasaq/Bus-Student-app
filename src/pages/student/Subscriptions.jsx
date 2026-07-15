@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { NavLink, Navigate, useLocation } from 'react-router-dom'
 import { CalendarDays, CreditCard, Clock, FileText, Upload, ShoppingCart, Trash2 } from 'lucide-react'
 import { resolveDailyExecutionDates } from '../../../backend/src/utils/dateUtils.js'
 import { api } from '../../lib/api'
+import ConfirmModal from '../../components/ui/ConfirmModal'
 
 const PLAN_LABELS = {
   DAILY: 'يومي',
@@ -800,13 +801,20 @@ export default function Subscriptions() {
     )
   }
 
-  async function handleCartSubmit() {
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
+
+  const handleCartSubmit = useCallback(() => {
     setCartError('')
     setCartSuccess('')
     if (!cartReceipt) {
       setCartError('يرجى رفع صورة سند التحويل')
       return
     }
+    setShowSubmitConfirm(true)
+  }, [cartReceipt])
+
+  async function handleConfirmSubmit() {
+    setShowSubmitConfirm(false)
     setCartSubmitting(true)
     try {
       await api.cart.submit(cartReceipt)
@@ -931,6 +939,41 @@ export default function Subscriptions() {
         if (currentTab === 'history') return renderHistoryTab()
         return renderDailyTab()
       })()}
+
+      <ConfirmModal
+        show={showSubmitConfirm}
+        onClose={() => setShowSubmitConfirm(false)}
+        onConfirm={handleConfirmSubmit}
+        title="تأكيد إرسال طلب الاشتراك"
+        loading={cartSubmitting}
+      >
+        <p className="mb-3">سيتم إرسال طلب الاشتراك التالي للموافقة:</p>
+        <div className="space-y-2 mb-3">
+          {cart?.items?.map((item, idx) => (
+            <div key={item.id || idx} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+              <div className="text-sm font-bold text-slate-800">
+                {item.type === 'DAILY' ? 'اشتراك يومي' : item.type === 'FOUR_WEEKS' ? 'اشتراك 4 أسابيع' : item.type === 'THREE_WEEKS' ? 'اشتراك 3 أسابيع' : item.type}
+                {item.data?.campaignTitle && <span className="text-slate-500 font-medium"> - {item.data.campaignTitle}</span>}
+              </div>
+              <div className="text-xs text-slate-500 mt-1 space-y-0.5">
+                {item.data?.startDate && (
+                  <p><span className="text-slate-400">من:</span> {new Date(item.data.startDate).toLocaleDateString('ar-SA')} <span className="text-slate-400">إلى:</span> {new Date(item.data.endDate).toLocaleDateString('ar-SA')}</p>
+                )}
+                {item.data?.selectedDays?.length > 0 && (
+                  <p><span className="text-slate-400">الأيام:</span> {item.data.selectedDays.map(d => DAY_NAMES_AR[d]).join('، ')}</p>
+                )}
+                {item.data?.weeksCount && <p><span className="text-slate-400">المدة:</span> {item.data.weeksCount} {item.data.weeksCount === 1 ? 'أسبوع' : 'أسابيع'}</p>}
+              </div>
+              <div className="text-xs font-bold text-[var(--color-primary)] mt-1">{Number(item.amount).toLocaleString()} ريال</div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-between bg-[var(--color-primary)]/5 rounded-xl p-3">
+          <span className="text-sm font-bold text-slate-800">الإجمالي</span>
+          <span className="text-sm font-extrabold text-[var(--color-primary)]">{Number(cart?.totalAmount).toLocaleString()} <span className="text-xs">ريال</span></span>
+        </div>
+        <p className="text-xs text-slate-400 mt-3">بإرسال الطلب، توافق على شروط الاشتراك في الخدمة.</p>
+      </ConfirmModal>
     </div>
   )
 }
